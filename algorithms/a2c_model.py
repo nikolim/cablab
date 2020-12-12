@@ -16,12 +16,16 @@ class ActorCriticModel(nn.Module):
     def forward(self, x):
         x = torch.Tensor(x)
         x = F.relu(self.fc1(x))
-        action_x = F.softmax(self.action1(x))
+
+        action_x = F.relu(self.action1(x))
         action_probs = F.softmax(self.action2(action_x), dim=-1)
-        value_x = F.softmax(self.value1(x))
-        state_values = self.value(value_x)
+
+        value_x = F.relu(self.value1(x))
+        state_values = self.value2(value_x)
+
         return action_probs, state_values
- 
+
+
 class PolicyNetwork:
     def __init__(self, writer):
         self.model = ActorCriticModel()
@@ -47,4 +51,3 @@ class PolicyNetwork:
         action = torch.multinomial(action_probs, 1).item()
         log_prob = torch.log(action_probs[action])
         return action, log_prob, state_value
-

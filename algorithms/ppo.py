@@ -9,10 +9,11 @@ from tensorboard_tracker import track_reward, log_rewards
 from tensorboard_tracker import log_rewards, track_reward
 
 from pyvirtualdisplay import Display
+
 disp = Display().start()
 
-torch.manual_seed(0)
-env = gym.make("Cabworld-v4")
+torch.manual_seed(42)
+env = gym.make("Cabworld-v5")
 
 log_interval = 10
 episodes = 3000
@@ -23,7 +24,7 @@ memory = Memory()
 ppo = PPO()
 
 dirname = os.path.dirname(__file__)
-log_path = os.path.join(dirname, '../runs', 'ppo')
+log_path = os.path.join(dirname, "../runs", "ppo")
 if not os.path.exists(log_path):
     os.mkdir(log_path)
 log_folders = os.listdir(log_path)
@@ -58,6 +59,6 @@ for episode in range(episodes):
             timestep = 0
 
         if done:
-            print(f'Episode: {episode} Reward: {episode_reward}')
+            print(f"Episode: {episode} Reward: {episode_reward}")
             log_rewards(writer, saved_rewards, episode_reward, episode)
             break

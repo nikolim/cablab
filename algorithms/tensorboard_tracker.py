@@ -10,7 +10,7 @@ def track_reward(reward, saved_rewards):
 
 
 def log_rewards(writer, saved_rewards, episode_reward, episode):
-    writer.add_scalar('Path Penalty', saved_rewards[0], episode)
-    writer.add_scalar('Illegal Pick-up / Drop-off', saved_rewards[1], episode)
-    writer.add_scalar('Illegal Move', saved_rewards[2], episode)
-    writer.add_scalar('Reward', episode_reward, episode)
+    writer.add_scalar("Path Penalty", saved_rewards[0], episode)
+    writer.add_scalar("Illegal Pick-up / Drop-off", saved_rewards[1], episode)
+    writer.add_scalar("Illegal Move", saved_rewards[2], episode)
+    writer.add_scalar("Reward", episode_reward, episode)

@@ -1,3 +1,4 @@
+import random
 import torch
 import torch.nn as nn
 from torch.distributions import Categorical
@@ -5,6 +6,7 @@ from torch.distributions import Categorical
 from collections import deque
 
 torch.manual_seed(0)
+
 
 class Memory:
     def __init__(self):
@@ -34,7 +36,8 @@ class ActorCritic(nn.Module):
             nn.Linear(64, 64),
             nn.Tanh(),
             nn.Linear(64, 5),
-            nn.Softmax(dim=-1))
+            nn.Softmax(dim=-1),
+        )
 
         self.critic = nn.Sequential(
             nn.Linear(11, 64),
@@ -43,7 +46,8 @@ class ActorCritic(nn.Module):
             nn.Tanh(),
             nn.Linear(64, 64),
             nn.Tanh(),
-            nn.Linear(64, 1))
+            nn.Linear(64, 1),
+        )
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -52,7 +56,12 @@ class ActorCritic(nn.Module):
         state = torch.Tensor(state).to(self.device)
         action_probs = self.actor(state)
         dist = Categorical(action_probs)
-        action = dist.sample()
+        # add random process
+        if random.random() < 0.05:
+            rand_int = random.randint(0, 4)
+            action = torch.Tensor(rand_int)
+        else:
+            action = dist.sample()
 
         memory.states.append(state)
         memory.actions.append(action)
@@ -82,7 +91,8 @@ class PPO:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.policy = ActorCritic().to(self.device)
         self.optimizer = torch.optim.Adam(
-            self.policy.parameters(), lr=self.lr, betas=self.betas)
+            self.policy.parameters(), lr=self.lr, betas=self.betas
+        )
         self.policy_old = ActorCritic().to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
 
@@ -91,7 +101,9 @@ class PPO:
     def update(self, memory, episode):
         rewards = []
         discounted_reward = 0
-        for reward, is_terminal in zip(reversed(memory.rewards), reversed(memory.is_terminal)):
+        for reward, is_terminal in zip(
+            reversed(memory.rewards), reversed(memory.is_terminal)
+        ):
             if is_terminal:
                 discounted_reward = 0
             discounted_reward = reward + (self.gamma * discounted_reward)
@@ -106,16 +118,21 @@ class PPO:
 
         for _ in range(self.K_epochs):
             logprobs, state_values, dist_entropy = self.policy.evaluate(
-                old_states, old_actions)
+                old_states, old_actions
+            )
             ratios = torch.exp(logprobs - old_logprobs.detach())
             advantages = rewards - state_values.detach()
             surr1 = ratios * advantages
-            tmp = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip)
-            surr2 = torch.clamp(ratios, 1-self.eps_clip,
-                                1+self.eps_clip) * advantages
+            tmp = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip)
+            surr2 = (
+                torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+            )
 
-            loss = -torch.min(surr1, surr2) + 0.5 * \
-                self.MseLoss(state_values, rewards) - 0.02*dist_entropy
+            loss = (
+                -torch.min(surr1, surr2)
+                + 0.5 * self.MseLoss(state_values, rewards)
+                - 0.02 * dist_entropy
+            )
 
             self.optimizer.zero_grad()
             loss.mean().backward()
