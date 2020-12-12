@@ -56,12 +56,7 @@ class ActorCritic(nn.Module):
         state = torch.Tensor(state).to(self.device)
         action_probs = self.actor(state)
         dist = Categorical(action_probs)
-        # add random process
-        if random.random() < 0.05:
-            rand_int = random.randint(0, 4)
-            action = torch.Tensor(rand_int)
-        else:
-            action = dist.sample()
+        action = dist.sample()
 
         memory.states.append(state)
         memory.actions.append(action)
@@ -137,5 +132,7 @@ class PPO:
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()
-
+        
+        uncertainty = (torch.sum(torch.squeeze(logprobs))).item() * -1
         self.policy_old.load_state_dict(self.policy.state_dict())
+        return uncertainty

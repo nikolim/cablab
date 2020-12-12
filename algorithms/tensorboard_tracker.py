@@ -14,3 +14,10 @@ def log_rewards(writer, saved_rewards, episode_reward, episode):
     writer.add_scalar("Illegal Pick-up / Drop-off", saved_rewards[1], episode)
     writer.add_scalar("Illegal Move", saved_rewards[2], episode)
     writer.add_scalar("Reward", episode_reward, episode)
+
+def log_reward_epsilon(write, episode_reward, epsilon, episode): 
+    writer.add_scalars("Reward/Epsilon", {'Reward':episode_reward, 'Epsilon':epsilon*1000}, episode)
+
+def log_reward_uncertainty(writer, episode_reward, uncertainty, episode):
+    writer.add_scalars("Reward/Uncertainty", {'Reward':episode_reward, 'Uncertainty':uncertainty}, episode)
+

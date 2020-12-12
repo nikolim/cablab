@@ -6,7 +6,7 @@ import time
 import torch
 from torch.autograd import Variable
 from collections import deque
-from tensorboard_tracker import track_reward, log_rewards
+from tensorboard_tracker import track_reward, log_rewards, log_reward_epsilon
 from torch.utils.tensorboard import SummaryWriter
 
 from dqn_model import DQN, gen_epsilon_greedy_policy
@@ -35,6 +35,7 @@ def q_learning(env, estimator, n_episode, writer, gamma=1.0, epsilon=0.1, epsilo
                 estimator.update(state, q_values)
                 print(f"Episode: {episode} Reward: {running_reward}")
                 log_rewards(writer, saved_rewards, running_reward, episode)
+                log_reward_epsilon(writer running_reward, epsilon, episode)
                 break
 
             q_values_next = estimator.predict(next_state)

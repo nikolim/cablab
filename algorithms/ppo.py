@@ -6,14 +6,14 @@ from torch.utils.tensorboard import SummaryWriter
 from ppo_models import Memory, ActorCritic, PPO
 from tensorboard_tracker import track_reward, log_rewards
 
-from tensorboard_tracker import log_rewards, track_reward
+from tensorboard_tracker import log_rewards, track_reward, log_reward_uncertainty
 
 from pyvirtualdisplay import Display
 
 disp = Display().start()
 
 torch.manual_seed(42)
-env = gym.make("Cabworld-v5")
+env = gym.make("Cabworld-v4")
 
 log_interval = 10
 episodes = 3000
@@ -42,8 +42,10 @@ for episode in range(episodes):
     state = env.reset()
     saved_rewards = (0, 0, 0)
     episode_reward = 0
+    uncertainty = None
 
     for t in range(max_timesteps):
+
         timestep += 1
         action = ppo.policy_old.act(state, memory)
         state, reward, done, _ = env.step(action)
@@ -54,11 +56,13 @@ for episode in range(episodes):
         memory.is_terminal.append(done)
 
         if timestep % update_timestep == 0:
-            ppo.update(memory, episode)
+            uncertainty = ppo.update(memory, episode)
             memory.clear()
             timestep = 0
 
         if done:
             print(f"Episode: {episode} Reward: {episode_reward}")
             log_rewards(writer, saved_rewards, episode_reward, episode)
+            if uncertainty:
+                log_reward_uncertainty(writer, episode_reward, uncertainty, episode)
             break

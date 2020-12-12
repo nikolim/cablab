@@ -5,7 +5,7 @@ import random
 import time
 import torch
 from collections import deque
-from tensorboard_tracker import track_reward, log_rewards
+from tensorboard_tracker import track_reward, log_rewards, log_reward_uncertainty
 
 from torch.utils.tensorboard import SummaryWriter
 from a2c_model import ActorCriticModel, PolicyNetwork
@@ -18,26 +18,25 @@ disp = Display().start()
 def actor_critic(
     env, estimator, n_episode, writer, gamma, epsilon, epsilon_decay, n_action, render
 ):
-    total_reward_episode = [0] * n_episode
 
     for episode in range(n_episode):
         log_probs = []
         rewards = []
+        running_reward = 0
         state_values = []
         state = env.reset()
         saved_rewards = (0, 0, 0)
-        last_episode = episode == (n_episode - 1)
         while True:
             action, log_prob, state_value = estimator.get_action(state)
             next_state, reward, is_done, _ = env.step(action)
             saved_rewards = track_reward(reward, saved_rewards)
-            total_reward_episode[episode] += reward
+            running_reward += reward
             log_probs.append(log_prob)
             state_values.append(state_value)
             rewards.append(reward)
 
             if is_done:
-                print(f"Episode: {episode} Reward: {total_reward_episode[episode]}")
+                print(f"Episode: {episode} Reward: {running_reward}")
                 returns = []
                 Gt = 0
                 pw = 0
@@ -50,14 +49,14 @@ def actor_critic(
                 returns = torch.tensor(returns)
                 returns = (returns - returns.mean()) / (returns.std() + 1e-9)
                 estimator.update(returns, log_probs, state_values, episode)
-                log_rewards(
-                    writer, saved_rewards, total_reward_episode[episode], episode
-                )
+                log_rewards(writer, saved_rewards, running_reward, episode)
+                uncertainty = sum(log_probs) * -1
+                log_reward_uncertainty(writer, running_reward, uncertainty, episode)
                 break
             state = next_state
 
 
-env = gym.make("Cabworld-v5")
+env = gym.make("Cabworld-v4")
 n_action = env.action_space.n
 n_episode = 3000
 n_feature = 11
