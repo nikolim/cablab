@@ -107,6 +107,8 @@ class PPO:
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
 
+        memory_states = memory.states
+
         old_states = torch.stack(tuple(memory.states)).to(self.device).detach()
         old_actions = torch.stack(tuple(memory.actions)).to(self.device).detach()
         old_logprobs = torch.stack(tuple(memory.logprobs)).to(self.device).detach()
@@ -126,13 +128,13 @@ class PPO:
             loss = (
                 -torch.min(surr1, surr2)
                 + 0.5 * self.MseLoss(state_values, rewards)
-                - 0.02 * dist_entropy
+                - 0.01 * dist_entropy
             )
 
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()
-        
+
         uncertainty = (torch.sum(torch.squeeze(logprobs))).item() * -1
         self.policy_old.load_state_dict(self.policy.state_dict())
         return uncertainty

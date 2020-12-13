@@ -16,7 +16,9 @@ from pyvirtualdisplay import Display
 disp = Display().start()
 
 
-def q_learning(env, estimator, n_episode, writer, gamma=1.0, epsilon=0.1, epsilon_decay=0.99):
+def q_learning(
+    env, estimator, n_episode, writer, gamma=1.0, epsilon=0.1, epsilon_decay=0.99
+):
     for episode in range(n_episode):
         policy = gen_epsilon_greedy_policy(estimator, epsilon, n_action)
         state = env.reset()
@@ -35,7 +37,7 @@ def q_learning(env, estimator, n_episode, writer, gamma=1.0, epsilon=0.1, epsilo
                 estimator.update(state, q_values)
                 print(f"Episode: {episode} Reward: {running_reward}")
                 log_rewards(writer, saved_rewards, running_reward, episode)
-                log_reward_epsilon(writer running_reward, epsilon, episode)
+                log_reward_epsilon(writer, running_reward, epsilon, episode)
                 break
 
             q_values_next = estimator.predict(next_state)
@@ -46,7 +48,7 @@ def q_learning(env, estimator, n_episode, writer, gamma=1.0, epsilon=0.1, epsilo
         epsilon = max(epsilon * epsilon_decay, 0.01)
 
 
-env = gym.make("Cabworld-v4")
+env = gym.make("Cabworld-v5")
 n_action = env.action_space.n
 n_episode = 3000
 n_feature = 11
@@ -67,4 +69,4 @@ log_path = os.path.join(log_path, str(folder_number))
 writer = SummaryWriter(log_path)
 
 dqn = DQN(n_feature, n_action, n_hidden, lr)
-q_learning(env, dqn, n_episode,writer, gamma=0.9, epsilon=1)
+q_learning(env, dqn, n_episode, writer, gamma=0.9, epsilon=1)

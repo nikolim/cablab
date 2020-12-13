@@ -56,7 +56,7 @@ def actor_critic(
             state = next_state
 
 
-env = gym.make("Cabworld-v4")
+env = gym.make("Cabworld-v5")
 n_action = env.action_space.n
 n_episode = 3000
 n_feature = 11
