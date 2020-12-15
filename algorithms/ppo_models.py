@@ -107,8 +107,6 @@ class PPO:
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
 
-        memory_states = memory.states
-
         old_states = torch.stack(tuple(memory.states)).to(self.device).detach()
         old_actions = torch.stack(tuple(memory.actions)).to(self.device).detach()
         old_logprobs = torch.stack(tuple(memory.logprobs)).to(self.device).detach()
@@ -120,11 +118,9 @@ class PPO:
             ratios = torch.exp(logprobs - old_logprobs.detach())
             advantages = rewards - state_values.detach()
             surr1 = ratios * advantages
-            tmp = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip)
             surr2 = (
                 torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
             )
-
             loss = (
                 -torch.min(surr1, surr2)
                 + 0.5 * self.MseLoss(state_values, rewards)

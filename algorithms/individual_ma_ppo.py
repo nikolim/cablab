@@ -1,4 +1,4 @@
-import os
+import os, time
 import torch
 import gym
 import gym_cabworld
@@ -58,6 +58,10 @@ for episode in range(episodes):
 
     for t in range(max_timesteps):
 
+        if episode >= 2995:
+            env.render()
+            time.sleep(0.05)
+
         timestep += 1
         action = ppo.policy_old.act(state, memory)
         action2 = ppo2.policy_old.act(state2, memory2)
@@ -82,8 +86,7 @@ for episode in range(episodes):
             timestep = 0
 
         if done:
-            print(f"Agent 1: Episode: {episode} Reward: {episode_reward}")
-            print(f"Agent 2: Episode: {episode} Reward: {episode_reward2}")
+            print(f"Episode: {episode} Rewards: {episode_reward} | {episode_reward2}")
 
             log_rewards(writer, saved_rewards, episode_reward, episode)
             log_rewards(writer2, saved_rewards2, episode_reward2, episode)

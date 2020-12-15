@@ -59,8 +59,7 @@ class ActorCritic(nn.Module):
             nn.Tanh(),
             nn.Linear(64, 1),
         )
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def act(self, states, memory):
 
@@ -86,72 +85,81 @@ class ActorCritic(nn.Module):
 
     def evaluate(self, states, actions):
 
-        state, state2=states
-        action, action2=actions
+        state, state2 = states
+        action, action2 = actions
 
-        action_probs=self.actor(state)
-        action_probs2=self.actor(state2)
+        action_probs = self.actor(state)
+        action_probs2 = self.actor(state2)
 
-        dist=Categorical(action_probs)
-        dist2=Categorical(action_probs2)
+        dist = Categorical(action_probs)
+        dist2 = Categorical(action_probs2)
 
-        action_logprobs=dist.log_prob(action)
-        action_logprobs2=dist.log_prob(action2)
+        action_logprobs = dist.log_prob(action)
+        action_logprobs2 = dist.log_prob(action2)
 
-        dist_entropy=dist.entropy()
-        dist_entropy2=dist2.entropy()
+        dist_entropy = dist.entropy()
+        dist_entropy2 = dist2.entropy()
 
         # stacked_state = torch.cat((state, state2),1)
 
-        state_value=self.critic(state)
-        state_value2=self.critic(state2)
+        state_value = self.critic(state)
+        state_value2 = self.critic(state2)
 
-        return (action_logprobs, action_logprobs2), (torch.squeeze(state_value),torch.squeeze(state_value2)), (dist_entropy, dist_entropy2)
+        return (
+            (action_logprobs, action_logprobs2),
+            (torch.squeeze(state_value), torch.squeeze(state_value2)),
+            (dist_entropy, dist_entropy2),
+        )
+
 
 class MAPPO:
     def __init__(self):
-        
-        self.lr=0.001
-        self.betas=(0.9, 0.999)
-        self.gamma=0.99
-        self.eps_clip=0.2
-        self.K_epochs=4
 
-        self.device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.policy=ActorCritic().to(self.device)
-        
-        self.optimizer=torch.optim.Adam(self.policy.parameters(), lr = self.lr, betas = self.betas)
-        self.optimizer2=torch.optim.Adam(self.policy.parameters(), lr = self.lr, betas = self.betas)
+        self.lr = 0.001
+        self.betas = (0.9, 0.999)
+        self.gamma = 0.99
+        self.eps_clip = 0.2
+        self.K_epochs = 4
 
-        self.policy_old=ActorCritic().to(self.device)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.policy = ActorCritic().to(self.device)
+
+        self.optimizer = torch.optim.Adam(
+            self.policy.parameters(), lr=self.lr, betas=self.betas
+        )
+        self.optimizer2 = torch.optim.Adam(
+            self.policy.parameters(), lr=self.lr, betas=self.betas
+        )
+
+        self.policy_old = ActorCritic().to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
 
-        self.MseLoss=nn.MSELoss()
+        self.MseLoss = nn.MSELoss()
 
     def update(self, memory, episode):
 
-        rewards=[]
-        rewards2=[]
-        discounted_reward=0
-        discounted_reward2=0
+        rewards = []
+        rewards2 = []
+        discounted_reward = 0
+        discounted_reward2 = 0
 
         for reward, is_terminal in zip(
             reversed(memory.rewards), reversed(memory.is_terminal)
         ):
             if is_terminal:
-                discounted_reward=0
-                discounted_reward2=0
+                discounted_reward = 0
+                discounted_reward2 = 0
 
-            discounted_reward=reward[0] + (self.gamma * discounted_reward)
-            discounted_reward2=reward[1] + (self.gamma * discounted_reward2)
+            discounted_reward = reward[0] + (self.gamma * discounted_reward)
+            discounted_reward2 = reward[1] + (self.gamma * discounted_reward2)
             rewards.insert(0, discounted_reward)
             rewards2.insert(0, discounted_reward2)
 
-        rewards=torch.tensor(rewards, dtype = torch.float32).to(self.device)
-        rewards=(rewards - rewards.mean()) / (rewards.std() + 1e-5)
+        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
+        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
 
-        rewards2=torch.tensor(rewards2, dtype = torch.float32).to(self.device)
-        rewards2=(rewards2 - rewards2.mean()) / (rewards2.std() + 1e-5)
+        rewards2 = torch.tensor(rewards2, dtype=torch.float32).to(self.device)
+        rewards2 = (rewards2 - rewards2.mean()) / (rewards2.std() + 1e-5)
 
         tmp1 = memory.states
         tmp2 = memory.actions
@@ -166,34 +174,50 @@ class MAPPO:
         logprobs_1 = [tmp[0] for tmp in memory.logprobs]
         logprobs_2 = [tmp[1] for tmp in memory.logprobs]
 
-
-        old_states=(torch.stack(states_1).to(self.device).detach(),torch.stack(states_2).to(self.device).detach())
-        old_actions=(torch.stack(actions_1).to(self.device).detach(),torch.stack(actions_2).to(self.device).detach())
-        old_logprobs=(torch.stack(logprobs_1).to(self.device).detach(),torch.stack(logprobs_2).to(self.device).detach())
+        old_states = (
+            torch.stack(states_1).to(self.device).detach(),
+            torch.stack(states_2).to(self.device).detach(),
+        )
+        old_actions = (
+            torch.stack(actions_1).to(self.device).detach(),
+            torch.stack(actions_2).to(self.device).detach(),
+        )
+        old_logprobs = (
+            torch.stack(logprobs_1).to(self.device).detach(),
+            torch.stack(logprobs_2).to(self.device).detach(),
+        )
 
         for _ in range(self.K_epochs):
-            logprobs, (state_value, state_value2), dist_entropy=self.policy.evaluate(
+            logprobs, (state_value, state_value2), dist_entropy = self.policy.evaluate(
                 old_states, old_actions
             )
-            ratios=torch.exp(logprobs[0] - old_logprobs[0].detach())
-            ratios2=torch.exp(logprobs[1] - old_logprobs[1].detach())
+            ratios = torch.exp(logprobs[0] - old_logprobs[0].detach())
+            ratios2 = torch.exp(logprobs[1] - old_logprobs[1].detach())
 
-            advantages=rewards - state_value.detach()
-            advantages2=rewards2 - state_value2.detach()
+            advantages = rewards - state_value.detach()
+            advantages2 = rewards2 - state_value2.detach()
 
-            surr1=ratios * advantages
-            surr12=ratios2 * advantages2
-            
-            surr2=(torch.clamp(ratios, 1 - self.eps_clip,1 + self.eps_clip) * advantages)
-            surr22=(torch.clamp(ratios2, 1 - self.eps_clip,1 + self.eps_clip) * advantages2)
+            surr1 = ratios * advantages
+            surr12 = ratios2 * advantages2
 
-            loss1=(-torch.min(surr1, surr2)
+            surr2 = (
+                torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+            )
+            surr22 = (
+                torch.clamp(ratios2, 1 - self.eps_clip, 1 + self.eps_clip) * advantages2
+            )
+
+            loss1 = (
+                -torch.min(surr1, surr2)
                 + 0.5 * self.MseLoss(state_value, rewards)
-                - 0.01 * dist_entropy[0])
+                - 0.01 * dist_entropy[0]
+            )
 
-            loss2=(-torch.min(surr12, surr22)
+            loss2 = (
+                -torch.min(surr12, surr22)
                 + 0.5 * self.MseLoss(state_value, rewards2)
-                - 0.01 * dist_entropy[1])
+                - 0.01 * dist_entropy[1]
+            )
 
             loss = torch.add(loss1, loss2)
 
@@ -201,6 +225,8 @@ class MAPPO:
             loss.mean().backward()
             self.optimizer.step()
 
-        uncertainty=(torch.sum(torch.squeeze(torch.add(logprobs[0], logprobs[1])))).item() * -1
+        uncertainty = (
+            torch.sum(torch.squeeze(torch.add(logprobs[0], logprobs[1])))
+        ).item() * -1
         self.policy_old.load_state_dict(self.policy.state_dict())
         return uncertainty
