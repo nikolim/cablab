@@ -13,12 +13,13 @@ from pyvirtualdisplay import Display
 disp = Display().start()
 
 torch.manual_seed(42)
-env = gym.make("Cabworld-v6")
+env_name = "Cabworld-v6"
+env = gym.make(env_name)
 
 log_interval = 10
-episodes = 3000
+episodes = 500
 max_timesteps = 10000
-update_timestep = 3000
+update_timestep = 10000
 
 memory = Memory()
 ppo = PPO()
@@ -33,9 +34,18 @@ if len(log_folders) == 0:
 else:
     folder_number = max([int(elem) for elem in log_folders]) + 1
 log_path = os.path.join(log_path, str(folder_number))
-writer = SummaryWriter(log_path)
+
+with open(os.path.join(log_path, "info"), "w") as info_file: 
+    info_file.write(env_name + "\n")
+    info_file.write("Episodes:" + episodes + "\n")
 
 timestep = 0
+
+illegal_pick_ups = []
+illegal_moves = []
+entropys = []
+n_passengers = []
+rewards = []
 
 for episode in range(episodes):
 
@@ -43,26 +53,47 @@ for episode in range(episodes):
     saved_rewards = (0, 0, 0)
     episode_reward = 0
     uncertainty = None
+    n_steps = 0
+    pick_ups = 0
+    mean_entropy = 0
 
     for t in range(max_timesteps):
 
         timestep += 1
+        n_steps += 1
         action = ppo.policy_old.act(state, memory)
         state, reward, done, _ = env.step(action)
         saved_rewards = track_reward(reward, saved_rewards)
         episode_reward += reward
 
+        if reward == 100: 
+            pick_ups += 1
+
         memory.rewards.append(reward)
         memory.is_terminal.append(done)
 
         if timestep % update_timestep == 0:
-            uncertainty = ppo.update(memory, episode)
+            mean_entropy = ppo.update(memory, episode)
             memory.clear()
             timestep = 0
 
         if done:
-            print(f"Episode: {episode} Reward: {episode_reward}")
+            print(f"Episode: {episode} Reward: {episode_reward} Steps {n_steps} Passengers {pick_ups//2} Entropy {mean_entropy}")
             log_rewards(writer, saved_rewards, episode_reward, episode)
-            if uncertainty:
-                log_reward_uncertainty(writer, episode_reward, uncertainty, episode)
             break
+    
+    rewards.append(episode_reward)
+    illegal_pick_ups.append(saved_rewards[1])
+    illegal_moves.append(saved_rewards[2])
+    entropys.append(mean_entropy)
+    n_passengers.append(pick_ups//2)
+
+
+
+
+from plotting import * 
+
+plot_rewards(rewards)
+plot_rewards_and_entropy(rewards, entropys)
+plot_rewards_and_passengers(rewards, n_passengers)
+plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves)

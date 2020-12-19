@@ -2,12 +2,11 @@ def track_reward(reward, saved_rewards):
     saved_rewards = list(saved_rewards)
     if reward == -1:
         saved_rewards[0] += 1
-    if reward == -11:
+    if reward == -10:
         saved_rewards[1] += 1
-    if reward == -6:
+    if reward == -5:
         saved_rewards[2] += 1
     return tuple(saved_rewards)
-
 
 def log_rewards(writer, saved_rewards, episode_reward, episode):
     writer.add_scalar("Path Penalty", saved_rewards[0], episode)

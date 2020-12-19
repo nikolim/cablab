@@ -29,7 +29,7 @@ class ActorCritic(nn.Module):
         super(ActorCritic, self).__init__()
 
         self.actor = nn.Sequential(
-            nn.Linear(11, 64),
+            nn.Linear(19, 64),
             nn.Tanh(),
             nn.Linear(64, 64),
             nn.Tanh(),
@@ -40,7 +40,7 @@ class ActorCritic(nn.Module):
         )
 
         self.critic = nn.Sequential(
-            nn.Linear(11, 64),
+            nn.Linear(19, 64),
             nn.Tanh(),
             nn.Linear(64, 64),
             nn.Tanh(),
@@ -62,6 +62,13 @@ class ActorCritic(nn.Module):
         memory.actions.append(action)
         memory.logprobs.append(dist.log_prob(action))
 
+        return action.item()
+
+    def deploy(self, state):
+        state = torch.Tensor(state).to(self.device)
+        action_probs = self.actor(state)
+        dist = Categorical(action_probs)
+        action = dist.sample()
         return action.item()
 
     def evaluate(self, state, action):
@@ -126,11 +133,17 @@ class PPO:
                 + 0.5 * self.MseLoss(state_values, rewards)
                 - 0.01 * dist_entropy
             )
-
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()
 
-        uncertainty = (torch.sum(torch.squeeze(logprobs))).item() * -1
         self.policy_old.load_state_dict(self.policy.state_dict())
-        return uncertainty
+        mean_entropy = torch.mean(dist_entropy).item()
+        return mean_entropy
+
+    def save_model(self, PATH="ppo.pth")
+        torch.save(self.policy.state_dict(), PATH)
+
+    def load_model(self, PATH="ppo.pth")
+        self.policy = torch.load(PATH)
+        self.policy.eval()

@@ -26,6 +26,8 @@ def actor_critic(
         state_values = []
         state = env.reset()
         saved_rewards = (0, 0, 0)
+        pick_ups = 0
+
         while True:
             action, log_prob, state_value = estimator.get_action(state)
             next_state, reward, is_done, _ = env.step(action)
@@ -35,8 +37,11 @@ def actor_critic(
             state_values.append(state_value)
             rewards.append(reward)
 
+            if reward == 100: 
+                pick_ups += 1
+
             if is_done:
-                print(f"Episode: {episode} Reward: {running_reward}")
+                print(f"Episode: {episode} Reward: {running_reward} Passengers {pick_ups//2}")
                 returns = []
                 Gt = 0
                 pw = 0
@@ -59,7 +64,7 @@ def actor_critic(
 env = gym.make("Cabworld-v5")
 n_action = env.action_space.n
 n_episode = 3000
-n_feature = 11
+n_feature = 19
 lr = 0.001
 
 dirname = os.path.dirname(__file__)

@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class ActorCriticModel(nn.Module):
     def __init__(self):
         super(ActorCriticModel, self).__init__()
-        self.fc1 = nn.Linear(11, 64)
+        self.fc1 = nn.Linear(19, 64)
         self.action1 = nn.Linear(64, 64)
         self.action2 = nn.Linear(64, 5)
         self.value1 = nn.Linear(64, 64)

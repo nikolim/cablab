@@ -51,7 +51,7 @@ def q_learning(
 env = gym.make("Cabworld-v5")
 n_action = env.action_space.n
 n_episode = 3000
-n_feature = 11
+n_feature = 19
 lr = 0.001
 n_hidden = 64
 
