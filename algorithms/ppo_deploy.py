@@ -1,4 +1,5 @@
 import os
+import time
 import torch
 import gym
 import gym_cabworld
@@ -10,7 +11,7 @@ env = gym.make("Cabworld-v6")
 episodes = 5
 max_timesteps = 10000
 ppo = PPO()
-ppo.load_model(PATH='')
+ppo.load_model('../runs/ppo/51/ppo.pth')
 
 for episode in range(episodes):
 
@@ -22,6 +23,9 @@ for episode in range(episodes):
         action = ppo.policy.deploy(state)
         state, reward, done, _ = env.step(action)
         episode_reward += reward
+
+        env.render()
+        time.sleep(0.05)
 
         if done:
             print(f"Reward {episode_reward}")

@@ -1,15 +1,16 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 
-def plot_rewards(rewards):
+def plot_rewards(rewards, path):
     fig, ax1 = plt.subplots()
     ax1.set_xlabel('Episodes')
     ax1.set_ylabel('Reward')
     ax1.plot(rewards)
-    plt.savefig('../plots/rewards.png')
+    plt.savefig(os.path.join(path,'rewards.png'))
 
-def plot_rewards_and_entropy(rewards, entropy):
+def plot_rewards_and_entropy(rewards, entropy, path):
 
     fig, ax1 = plt.subplots()
     color = 'red'
@@ -25,9 +26,9 @@ def plot_rewards_and_entropy(rewards, entropy):
     ax2.tick_params(axis='y', labelcolor=color)
 
     fig.tight_layout()
-    plt.savefig('../plots/rewars_entropy.png')
+    plt.savefig(os.path.join(path,'rewards_entropy.png'))
 
-def plot_rewards_and_passengers(rewards, n_passenger):
+def plot_rewards_and_passengers(rewards, n_passenger, path):
 
     fig, ax1 = plt.subplots()
     color = 'red'
@@ -43,10 +44,10 @@ def plot_rewards_and_passengers(rewards, n_passenger):
     ax2.tick_params(axis='y', labelcolor=color)
 
     fig.tight_layout()
-    plt.savefig('../plots/rewards_passenger.png')
+    plt.savefig(os.path.join(path,'rewards_passengers.png'))
 
 
-def plot_rewards_and_illegal_actions(rewards, illegal_drop_offs, illegal_moves):
+def plot_rewards_and_illegal_actions(rewards, illegal_drop_offs, illegal_moves, path):
 
     fig, ax1 = plt.subplots()
     color = 'red'
@@ -67,8 +68,7 @@ def plot_rewards_and_illegal_actions(rewards, illegal_drop_offs, illegal_moves):
     ax2.tick_params(axis='y', labelcolor=color)
 
     fig.tight_layout()
-    plt.savefig('../plots/rewards_illegal_actions.png')
-
+    plt.savefig(os.path.join(path,'rewards_illegal_actions.png'))
 
 def smoothing():
     rewards = savgol_filter(rewards, 5, 3)
@@ -78,6 +78,3 @@ def smoothing():
     top = [x+diff_mean for x in rewards]
     bottom = [x-diff_mean for x in rewards]
     ax1.fill_between(x_axis, top, bottom, alpha=.5)
-
-
-plot_rewards([1,2,3,4,5])

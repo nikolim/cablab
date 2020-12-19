@@ -1,3 +1,4 @@
+import os
 import random
 import torch
 import torch.nn as nn
@@ -141,9 +142,12 @@ class PPO:
         mean_entropy = torch.mean(dist_entropy).item()
         return mean_entropy
 
-    def save_model(self, PATH="ppo.pth")
-        torch.save(self.policy.state_dict(), PATH)
+    def save_model(self, path):
+        full_path = os.path.join(path, 'ppo.pth')
+        torch.save(self.policy.state_dict(), full_path)
+        print(f"Model saved {full_path}")
 
-    def load_model(self, PATH="ppo.pth")
-        self.policy = torch.load(PATH)
+    def load_model(self, path):
+        self.policy.load_state_dict(torch.load(path, map_location=self.device))
         self.policy.eval()
+        print(f"Model loaded {path}")

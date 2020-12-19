@@ -17,7 +17,7 @@ env_name = "Cabworld-v6"
 env = gym.make(env_name)
 
 log_interval = 10
-episodes = 500
+episodes = 1
 max_timesteps = 10000
 update_timestep = 10000
 
@@ -33,11 +33,12 @@ if len(log_folders) == 0:
     folder_number = 0
 else:
     folder_number = max([int(elem) for elem in log_folders]) + 1
-log_path = os.path.join(log_path, str(folder_number))
 
-with open(os.path.join(log_path, "info"), "w") as info_file: 
+log_path = os.path.join(log_path, str(folder_number))
+os.mkdir(log_path)
+with open(os.path.join(log_path, "info.txt"), "w+") as info_file: 
     info_file.write(env_name + "\n")
-    info_file.write("Episodes:" + episodes + "\n")
+    info_file.write("Episodes:" + str(episodes) + "\n")
 
 timestep = 0
 
@@ -79,7 +80,6 @@ for episode in range(episodes):
 
         if done:
             print(f"Episode: {episode} Reward: {episode_reward} Steps {n_steps} Passengers {pick_ups//2} Entropy {mean_entropy}")
-            log_rewards(writer, saved_rewards, episode_reward, episode)
             break
     
     rewards.append(episode_reward)
@@ -88,12 +88,11 @@ for episode in range(episodes):
     entropys.append(mean_entropy)
     n_passengers.append(pick_ups//2)
 
-
-
+ppo.save_model(log_path)
 
 from plotting import * 
 
-plot_rewards(rewards)
-plot_rewards_and_entropy(rewards, entropys)
-plot_rewards_and_passengers(rewards, n_passengers)
-plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves)
+plot_rewards(rewards, log_path)
+plot_rewards_and_entropy(rewards, entropys, log_path)
+plot_rewards_and_passengers(rewards, n_passengers, log_path)
+plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves, log_path)
