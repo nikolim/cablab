@@ -30,18 +30,18 @@ class ActorCritic(nn.Module):
         super(ActorCritic, self).__init__()
 
         self.actor = nn.Sequential(
-            nn.Linear(19, 64),
+            nn.Linear(24, 64),
             nn.Tanh(),
             nn.Linear(64, 64),
             nn.Tanh(),
             nn.Linear(64, 64),
             nn.Tanh(),
-            nn.Linear(64, 5),
+            nn.Linear(64, 6),
             nn.Softmax(dim=-1),
         )
 
         self.critic = nn.Sequential(
-            nn.Linear(19, 64),
+            nn.Linear(24, 64),
             nn.Tanh(),
             nn.Linear(64, 64),
             nn.Tanh(),
@@ -49,7 +49,6 @@ class ActorCritic(nn.Module):
             nn.Tanh(),
             nn.Linear(64, 1),
         )
-
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def act(self, state, memory):

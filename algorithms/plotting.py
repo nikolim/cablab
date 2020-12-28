@@ -47,26 +47,30 @@ def plot_rewards_and_passengers(rewards, n_passenger, path):
     plt.savefig(os.path.join(path,'rewards_passengers.png'))
 
 
-def plot_rewards_and_illegal_actions(rewards, illegal_drop_offs, illegal_moves, path):
+def plot_rewards_and_illegal_actions(rewards, illegal_drop_offs, illegal_moves, do_nothing, path):
 
     fig, ax1 = plt.subplots()
     color = 'red'
     ax1.set_xlabel('Episodes')
     ax1.set_ylabel('Reward', color=color)
-    ax1.plot(rewards, color=color)
+    ax1.plot(rewards, color=color, label='Rewards')
     ax1.tick_params(axis='y', labelcolor=color)
 
     ax2 = ax1.twinx()
     color = 'blue'
-    ax2.set_ylabel('Illegal drop offs', color=color)
-    ax2.plot(illegal_drop_offs, color=color)
+    ax2.set_ylabel('Moves', color='black')
+    line1 = ax2.plot(illegal_drop_offs, color=color, label='Illegal drop-offs')
     ax2.tick_params(axis='y', labelcolor=color)
 
     color = 'darkblue'
-    ax2.set_ylabel('Illegal moves', color=color)
-    ax2.plot(illegal_moves, color=color)
+    line2 = ax2.plot(illegal_moves, color=color, label='Illegal moves')
     ax2.tick_params(axis='y', labelcolor=color)
 
+    color = 'green'
+    line3 = ax2.plot(do_nothing, color=color,label='Do nothing')
+    ax2.tick_params(axis='y', labelcolor=color)
+
+    plt.legend()
     fig.tight_layout()
     plt.savefig(os.path.join(path,'rewards_illegal_actions.png'))
 

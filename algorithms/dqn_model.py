@@ -1,14 +1,14 @@
 import torch
 from torch.autograd import Variable
 import random
-
+import copy
 
 random.seed(0)
 torch.manual_seed(0)
 
 
 class DQN:
-    def __init__(self, n_state, n_action, n_hidden=50, lr=0.05):
+    def __init__(self, n_state, n_action, n_hidden=64, lr=0.01):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
             torch.nn.Linear(n_state, n_hidden),
@@ -17,6 +17,7 @@ class DQN:
             torch.nn.ReLU(),
             torch.nn.Linear(n_hidden, n_action),
         )
+        self.model_target = copy.deepcopy(self.model)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
 
     def update(self, s, y):
@@ -29,6 +30,30 @@ class DQN:
     def predict(self, s):
         with torch.no_grad():
             return self.model(torch.Tensor(s))
+
+    def target_predict(self, s):
+        with torch.no_grad():
+            return self.model_target(torch.Tensor(s))
+    
+    def replay(self, memory, replay_size, gamma):
+        if len(memory) >= replay_size:
+            replay_data = random.sample(memory, replay_size)
+            states = []
+            td_targets = []
+            for state, action, next_state, reward, is_done in replay_data:
+                states.append(state)
+                q_values = self.predict(state).tolist()
+                if is_done:
+                    q_values[action] = reward
+                else:
+                    q_values_next = self.target_predict(next_state).detach()
+                    q_values[action] = reward + gamma * torch.max(q_values_next).item()
+
+                td_targets.append(q_values)
+            self.update(states, td_targets)
+
+    def copy_target(self):
+        self.model_target.load_state_dict(self.model.state_dict())
 
 
 def gen_epsilon_greedy_policy(estimator, epsilon, n_action):

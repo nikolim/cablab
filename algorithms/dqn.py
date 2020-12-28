@@ -9,6 +9,7 @@ from collections import deque
 from tensorboard_tracker import track_reward, log_rewards, log_reward_epsilon
 from torch.utils.tensorboard import SummaryWriter
 
+from features import feature_engineering
 from dqn_model import DQN, gen_epsilon_greedy_policy
 
 from pyvirtualdisplay import Display
@@ -17,32 +18,33 @@ disp = Display().start()
 
 
 def q_learning(
-    env, estimator, n_episode, writer, gamma=1.0, epsilon=0.1, epsilon_decay=0.99
-):
+    env, estimator, n_episode, target_update=10, gamma=1.0, epsilon=0.1, epsilon_decay=0.99):
+
     for episode in range(n_episode):
+
+        if episode % target_update == 0:
+            estimator.copy_target()
+
         policy = gen_epsilon_greedy_policy(estimator, epsilon, n_action)
         state = env.reset()
+        state = feature_engineering(state)
         is_done = False
-        saved_rewards = (0, 0, 0)
+        saved_rewards = [0, 0, 0]
         running_reward = 0
+
         while not is_done:
             action = policy(state)
             next_state, reward, is_done, _ = env.step(action)
+            reward = 1000 if reward == 100 else reward
+            next_state = feature_engineering(next_state)
             saved_rewards = track_reward(reward, saved_rewards)
             running_reward += reward
-            q_values = estimator.predict(state).tolist()
 
             if is_done:
-                q_values[action] = reward
-                estimator.update(state, q_values)
                 print(f"Episode: {episode} Reward: {running_reward}")
-                log_rewards(writer, saved_rewards, running_reward, episode)
-                log_reward_epsilon(writer, running_reward, epsilon, episode)
                 break
 
-            q_values_next = estimator.predict(next_state)
-            q_values[action] = reward + gamma * torch.max(q_values_next).item()
-            estimator.update(state, q_values)
+            estimator.replay(memory, replay_size, gamma)
             state = next_state
 
         epsilon = max(epsilon * epsilon_decay, 0.01)
@@ -51,9 +53,11 @@ def q_learning(
 env = gym.make("Cabworld-v5")
 n_action = env.action_space.n
 n_episode = 3000
-n_feature = 19
+n_feature = 24
 lr = 0.001
 n_hidden = 64
+memory = deque(maxlen=500000)
+replay_size = 10000
 
 dirname = os.path.dirname(__file__)
 log_path = os.path.join(dirname, "../runs", "dqn")
@@ -69,4 +73,4 @@ log_path = os.path.join(log_path, str(folder_number))
 writer = SummaryWriter(log_path)
 
 dqn = DQN(n_feature, n_action, n_hidden, lr)
-q_learning(env, dqn, n_episode, writer, gamma=0.9, epsilon=1)
+q_learning(env, dqn, n_episode, target_update=10, gamma=0.9, epsilon=1)

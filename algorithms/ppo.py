@@ -1,12 +1,13 @@
 import os
 import torch
 import gym
+import math
 import gym_cabworld
 from torch.utils.tensorboard import SummaryWriter
 from ppo_models import Memory, ActorCritic, PPO
 from tensorboard_tracker import track_reward, log_rewards
-
-from tensorboard_tracker import log_rewards, track_reward, log_reward_uncertainty
+from plotting import *
+from features import *
 
 from pyvirtualdisplay import Display
 
@@ -17,7 +18,7 @@ env_name = "Cabworld-v6"
 env = gym.make(env_name)
 
 log_interval = 10
-episodes = 1
+episodes = 1000
 max_timesteps = 10000
 update_timestep = 10000
 
@@ -31,6 +32,7 @@ if not os.path.exists(log_path):
 log_folders = os.listdir(log_path)
 if len(log_folders) == 0:
     folder_number = 0
+    
 else:
     folder_number = max([int(elem) for elem in log_folders]) + 1
 
@@ -44,6 +46,7 @@ timestep = 0
 
 illegal_pick_ups = []
 illegal_moves = []
+do_nothing = []
 entropys = []
 n_passengers = []
 rewards = []
@@ -51,7 +54,8 @@ rewards = []
 for episode in range(episodes):
 
     state = env.reset()
-    saved_rewards = (0, 0, 0)
+    state = feature_engineering(state)
+    saved_rewards = [0, 0, 0, 0]
     episode_reward = 0
     uncertainty = None
     n_steps = 0
@@ -63,12 +67,21 @@ for episode in range(episodes):
         timestep += 1
         n_steps += 1
         action = ppo.policy_old.act(state, memory)
+
+        if action == 5: 
+            saved_rewards[3] += 1
+
         state, reward, done, _ = env.step(action)
+        state = feature_engineering(state)
         saved_rewards = track_reward(reward, saved_rewards)
-        episode_reward += reward
 
         if reward == 100: 
             pick_ups += 1
+
+        # increase reward -> increase passengers 
+        reward = 1000 if reward == 100 else reward
+
+        episode_reward += reward
 
         memory.rewards.append(reward)
         memory.is_terminal.append(done)
@@ -85,6 +98,7 @@ for episode in range(episodes):
     rewards.append(episode_reward)
     illegal_pick_ups.append(saved_rewards[1])
     illegal_moves.append(saved_rewards[2])
+    do_nothing.append(saved_rewards[3])
     entropys.append(mean_entropy)
     n_passengers.append(pick_ups//2)
 
@@ -95,4 +109,4 @@ from plotting import *
 plot_rewards(rewards, log_path)
 plot_rewards_and_entropy(rewards, entropys, log_path)
 plot_rewards_and_passengers(rewards, n_passengers, log_path)
-plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves, log_path)
+plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves, do_nothing,log_path)
