@@ -1,3 +1,4 @@
+from plotting import *
 import os
 import gym
 import gym_cabworld
@@ -13,12 +14,9 @@ from features import feature_engineering
 from dqn_model import DQN, gen_epsilon_greedy_policy
 
 from pyvirtualdisplay import Display
-
 disp = Display().start()
 
-
-def q_learning(
-    env, estimator, n_episode, target_update=10, gamma=1.0, epsilon=0.1, epsilon_decay=0.99):
+def q_learning(env, estimator, n_episode, target_update=5, gamma=1.0, epsilon=0.1, epsilon_decay=0.95):
 
     for episode in range(n_episode):
 
@@ -27,37 +25,60 @@ def q_learning(
 
         policy = gen_epsilon_greedy_policy(estimator, epsilon, n_action)
         state = env.reset()
-        state = feature_engineering(state)
+        #state = feature_engineering(state)
         is_done = False
-        saved_rewards = [0, 0, 0]
+
+        saved_rewards = [0, 0, 0, 0]
         running_reward = 0
+        pick_ups = 0
 
         while not is_done:
             action = policy(state)
+
+            if action == 5: 
+                saved_rewards[3] += 1
+
             next_state, reward, is_done, _ = env.step(action)
-            reward = 1000 if reward == 100 else reward
-            next_state = feature_engineering(next_state)
+
+            if reward == 100: 
+                pick_ups += 1
+                reward = 10000
+
+            #next_state = feature_engineering(next_state)
             saved_rewards = track_reward(reward, saved_rewards)
             running_reward += reward
 
-            if is_done:
-                print(f"Episode: {episode} Reward: {running_reward}")
-                break
+            memory.append((state, action, next_state, reward, is_done))
 
-            estimator.replay(memory, replay_size, gamma)
+            if is_done:
+                
+                print(f"Episode: {episode} Reward: {running_reward} Passengers: {pick_ups//2}")
+                break
+        
             state = next_state
 
+        estimator.replay(memory, replay_size, gamma)
         epsilon = max(epsilon * epsilon_decay, 0.01)
 
+        rewards.append(running_reward)
+        illegal_pick_ups.append(saved_rewards[1])
+        illegal_moves.append(saved_rewards[2])
+        do_nothing.append(saved_rewards[3])
+        episolons.append(epsilon)
+        n_passengers.append(pick_ups//2)
 
-env = gym.make("Cabworld-v5")
+
+torch.manual_seed(42)
+env_name = "MountainCar-v0"
+env = gym.make(env_name)
+
 n_action = env.action_space.n
-n_episode = 3000
-n_feature = 24
-lr = 0.001
+n_episode = 10000
+n_feature = env.observation_space.shape[0]
+lr = 0.01
 n_hidden = 64
-memory = deque(maxlen=500000)
-replay_size = 10000
+memory = deque(maxlen=10000)
+replay_size = 10
 
 dirname = os.path.dirname(__file__)
 log_path = os.path.join(dirname, "../runs", "dqn")
@@ -70,7 +91,27 @@ else:
     folder_number = max([int(elem) for elem in log_folders]) + 1
 
 log_path = os.path.join(log_path, str(folder_number))
-writer = SummaryWriter(log_path)
+os.mkdir(log_path)
+with open(os.path.join(log_path, "info.txt"), "w+") as info_file: 
+    info_file.write(env_name + "\n")
+    info_file.write("Episodes:" + str(n_episode) + "\n")
+
+
+illegal_pick_ups = []
+illegal_moves = []
+do_nothing = []
+episolons = []
+n_passengers = []
+rewards = []
 
 dqn = DQN(n_feature, n_action, n_hidden, lr)
-q_learning(env, dqn, n_episode, target_update=10, gamma=0.9, epsilon=1)
+q_learning(env, dqn, n_episode, target_update=10, gamma=0.99, epsilon=1, epsilon_decay=0.99)
+
+dqn.save_model(log_path)
+
+from plotting import * 
+
+plot_rewards(rewards, log_path)
+plot_rewards_and_epsilon(rewards, episolons, log_path)
+plot_rewards_and_passengers(rewards, n_passengers, log_path)
+plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves, do_nothing,log_path)

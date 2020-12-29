@@ -2,6 +2,7 @@ import torch
 from torch.autograd import Variable
 import random
 import copy
+import os
 
 random.seed(0)
 torch.manual_seed(0)
@@ -11,11 +12,11 @@ class DQN:
     def __init__(self, n_state, n_action, n_hidden=64, lr=0.01):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
-            torch.nn.Linear(n_state, n_hidden),
+            torch.nn.Linear(n_state, 32),
             torch.nn.ReLU(),
-            torch.nn.Linear(n_hidden, n_hidden),
+            torch.nn.Linear(32, 32),
             torch.nn.ReLU(),
-            torch.nn.Linear(n_hidden, n_action),
+            torch.nn.Linear(32, n_action),
         )
         self.model_target = copy.deepcopy(self.model)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
@@ -48,13 +49,21 @@ class DQN:
                 else:
                     q_values_next = self.target_predict(next_state).detach()
                     q_values[action] = reward + gamma * torch.max(q_values_next).item()
-
                 td_targets.append(q_values)
             self.update(states, td_targets)
 
     def copy_target(self):
         self.model_target.load_state_dict(self.model.state_dict())
 
+    def save_model(self, path):
+        full_path = os.path.join(path, 'dqn.pth')
+        torch.save(self.model.state_dict(), full_path)
+        print(f"Model saved {full_path}")
+
+    def load_model(self, path):
+        self.model.load_state_dict(torch.load(path, map_location=self.device))
+        self.model.eval()
+        print(f"Model loaded {path}")
 
 def gen_epsilon_greedy_policy(estimator, epsilon, n_action):
     def policy_function(state):

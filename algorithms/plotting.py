@@ -28,6 +28,25 @@ def plot_rewards_and_entropy(rewards, entropy, path):
     fig.tight_layout()
     plt.savefig(os.path.join(path,'rewards_entropy.png'))
 
+
+def plot_rewards_and_epsilon(rewards, epsilon, path):
+
+    fig, ax1 = plt.subplots()
+    color = 'red'
+    ax1.set_xlabel('Episodes')
+    ax1.set_ylabel('Reward', color=color)
+    ax1.plot(rewards, color=color)
+    ax1.tick_params(axis='y', labelcolor=color)
+
+    ax2 = ax1.twinx()
+    color = 'blue'
+    ax2.set_ylabel('Epsilon', color=color)
+    ax2.plot(epsilon, color=color)
+    ax2.tick_params(axis='y', labelcolor=color)
+
+    fig.tight_layout()
+    plt.savefig(os.path.join(path,'rewards_epsilon.png'))
+
 def plot_rewards_and_passengers(rewards, n_passenger, path):
 
     fig, ax1 = plt.subplots()
