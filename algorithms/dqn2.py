@@ -24,17 +24,17 @@ class DQN():
         self.model = torch.nn.Sequential(
                         torch.nn.Linear(n_state, n_hidden),
                         torch.nn.ReLU(),
-                        torch.nn.Linear(n_hidden, n_hidden),
-                        torch.nn.ReLU(),
                         torch.nn.Linear(n_hidden, n_action)
                 )
-
         self.model_target = copy.deepcopy(self.model)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
+
+        self.losses = []
 
     def update(self, s, y):
         y_pred = self.model(torch.Tensor(s))
         loss = self.criterion(y_pred, Variable(torch.Tensor(y)))
+        self.losses.append(loss.item())
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
@@ -54,6 +54,7 @@ class DQN():
 
             states = []
             td_targets = []
+
             for state, action, next_state, reward, is_done in replay_data:
                 states.append(state)
                 q_values = self.predict(state).tolist()
@@ -61,7 +62,6 @@ class DQN():
                     q_values[action] = reward
                 else:
                     q_values_next = self.target_predict(next_state).detach()
-
                     q_values[action] = reward + gamma * torch.max(q_values_next).item()
 
                 td_targets.append(q_values)
@@ -95,11 +95,15 @@ def gen_epsilon_greedy_policy(estimator, epsilon, n_action):
 def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1.0, epsilon=0.1, epsilon_decay=.99):
     for episode in range(n_episode):
 
+        # for debugging
+        global counter
+        counter = episode
+
         if episode % target_update == 0:
             estimator.copy_target()
 
         policy = gen_epsilon_greedy_policy(estimator, epsilon, n_action)
-        state = feature_engineering(env.reset())[:8]
+        state = tuple((list(env.reset()))[:n_state])
         is_done = False
 
         saved_rewards = [0, 0, 0, 0]
@@ -109,32 +113,24 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1
         while not is_done:
 
             action = policy(state)
-
-            if action == 5: 
+            if action == 6: 
                 saved_rewards[3] += 1
 
             next_state, reward, is_done, _ = env.step(action)
-            next_state = feature_engineering(next_state)[:8]
+            next_state = tuple((list(next_state))[:n_state])
+            saved_rewards = track_reward(reward, saved_rewards)
 
             if reward == 100: 
                 pick_ups += 1
-                reward = 1000
-
+                reward = 100000
+    
             running_reward += reward
-            modified_reward = reward
-            saved_rewards = track_reward(reward, saved_rewards)
-
-            # add reward for approaching passengers
-            if next_state[0] == 1:
-                modified_reward += (1-next_state[7]) * 5 
-            else:
-                modified_reward += (1-next_state[6]) * 5 
-
-            memory.append((state, action, next_state, modified_reward, is_done))
+            
+            memory.append((state, action, next_state, reward, is_done))
 
             if is_done:
-                print(f"Episode: {episode} Reward: {running_reward} Passengers: {pick_ups//2}")
                 estimator.replay(memory, replay_size, gamma)
+                print(f"Episode: {episode} Reward: {running_reward} Passengers: {pick_ups//2}")
                 break
 
             state = next_state
@@ -147,14 +143,16 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1
         episolons.append(epsilon)
         n_passengers.append(pick_ups//2)
 
+
 n_state = 8
 n_action = 6
 n_hidden = 64
 lr = 0.01
 
-n_episode = 250
+n_episode = 500
 replay_size = 10000
 target_update = 5
+counter = 0
 
 illegal_pick_ups = []
 illegal_moves = []
@@ -183,12 +181,13 @@ with open(os.path.join(log_path, "info.txt"), "w+") as info_file:
     info_file.write("Episodes:" + str(n_episode) + "\n")
 
 
-q_learning(env, dqn, n_episode, replay_size, target_update, gamma=.9, epsilon=1)
+q_learning(env, dqn, n_episode, replay_size, target_update, gamma=.999, epsilon=0.5)
+
 dqn.save_model(log_path)
 
 from plotting import * 
 
-plot_rewards(rewards, log_path)
+plot_rewards(dqn.losses, log_path)
 plot_rewards_and_epsilon(rewards, episolons, log_path)
 plot_rewards_and_passengers(rewards, n_passengers, log_path)
 plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves, do_nothing,log_path)

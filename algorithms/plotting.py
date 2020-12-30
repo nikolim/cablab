@@ -79,15 +79,15 @@ def plot_rewards_and_illegal_actions(rewards, illegal_drop_offs, illegal_moves, 
     color = 'blue'
     ax2.set_ylabel('Moves', color='black')
     line1 = ax2.plot(illegal_drop_offs, color=color, label='Illegal drop-offs')
-    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.tick_params(axis='y', labelcolor='black')
 
     color = 'darkblue'
     line2 = ax2.plot(illegal_moves, color=color, label='Illegal moves')
-    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.tick_params(axis='y', labelcolor='black')
 
     color = 'green'
     line3 = ax2.plot(do_nothing, color=color,label='Do nothing')
-    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.tick_params(axis='y', labelcolor='black')
 
     plt.legend()
     fig.tight_layout()
