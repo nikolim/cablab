@@ -72,5 +72,4 @@ def gen_epsilon_greedy_policy(estimator, epsilon, n_action):
         else:
             q_values = estimator.predict(state)
             return torch.argmax(q_values).item()
-
     return policy_function

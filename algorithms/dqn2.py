@@ -1,5 +1,5 @@
 
-
+import os
 import gym
 import torch
 
@@ -9,15 +9,22 @@ import random
 import copy
 from torch.autograd import Variable
 
-env = gym.envs.make("MountainCar-v0")
+from tensorboard_tracker import track_reward
+from features import feature_engineering
 
+import gym_cabworld
+
+env_name = "Cabworld-v6"
+env = gym.envs.make(env_name)
 
 
 class DQN():
-    def __init__(self, n_state, n_action, n_hidden=50, lr=0.05):
+    def __init__(self, n_state, n_action, n_hidden=32, lr=0.05):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
                         torch.nn.Linear(n_state, n_hidden),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(n_hidden, n_hidden),
                         torch.nn.ReLU(),
                         torch.nn.Linear(n_hidden, n_action)
                 )
@@ -26,11 +33,6 @@ class DQN():
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
 
     def update(self, s, y):
-        """
-        Update the weights of the DQN given a training sample
-        @param s: state
-        @param y: target value
-        """
         y_pred = self.model(torch.Tensor(s))
         loss = self.criterion(y_pred, Variable(torch.Tensor(y)))
         self.optimizer.zero_grad()
@@ -39,30 +41,14 @@ class DQN():
 
 
     def predict(self, s):
-        """
-        Compute the Q values of the state for all actions using the learning model
-        @param s: input state
-        @return: Q values of the state for all actions
-        """
         with torch.no_grad():
             return self.model(torch.Tensor(s))
 
     def target_predict(self, s):
-        """
-        Compute the Q values of the state for all actions using the target network
-        @param s: input state
-        @return: targeted Q values of the state for all actions
-        """
         with torch.no_grad():
             return self.model_target(torch.Tensor(s))
 
     def replay(self, memory, replay_size, gamma):
-        """
-        Experience replay with target network
-        @param memory: a list of experience
-        @param replay_size: the number of samples we use to update the model each time
-        @param gamma: the discount factor
-        """
         if len(memory) >= replay_size:
             replay_data = random.sample(memory, replay_size)
 
@@ -85,6 +71,16 @@ class DQN():
     def copy_target(self):
         self.model_target.load_state_dict(self.model.state_dict())
 
+    def save_model(self, path):
+        full_path = os.path.join(path, 'dqn.pth')
+        torch.save(self.model.state_dict(), full_path)
+        print(f"Model saved {full_path}")
+
+    def load_model(self, path):
+        self.model.load_state_dict(torch.load(path, map_location=self.device))
+        self.model.eval()
+        print(f"Model loaded {path}")
+
 
 def gen_epsilon_greedy_policy(estimator, epsilon, n_action):
     def policy_function(state):
@@ -97,80 +93,102 @@ def gen_epsilon_greedy_policy(estimator, epsilon, n_action):
 
 
 def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1.0, epsilon=0.1, epsilon_decay=.99):
-    """
-    Deep Q-Learning using double DQN, with experience replay
-    @param env: Gym environment
-    @param estimator: DQN object
-    @param replay_size: number of samples we use to update the model each time
-    @param target_update: number of episodes before updating the target network
-    @param n_episode: number of episodes
-    @param gamma: the discount factor
-    @param epsilon: parameter for epsilon_greedy
-    @param epsilon_decay: epsilon decreasing factor
-    """
     for episode in range(n_episode):
 
         if episode % target_update == 0:
             estimator.copy_target()
 
         policy = gen_epsilon_greedy_policy(estimator, epsilon, n_action)
-        state = env.reset()
+        state = feature_engineering(env.reset())[:8]
         is_done = False
+
+        saved_rewards = [0, 0, 0, 0]
+        running_reward = 0
+        pick_ups = 0
 
         while not is_done:
 
             action = policy(state)
+
+            if action == 5: 
+                saved_rewards[3] += 1
+
             next_state, reward, is_done, _ = env.step(action)
+            next_state = feature_engineering(next_state)[:8]
 
-            total_reward_episode[episode] += reward
+            if reward == 100: 
+                pick_ups += 1
+                reward = 1000
 
-            modified_reward = next_state[0] + 0.5
+            running_reward += reward
+            modified_reward = reward
+            saved_rewards = track_reward(reward, saved_rewards)
 
-            if next_state[0] >= 0.5:
-                modified_reward += 100
-            elif next_state[0] >= 0.25:
-                modified_reward += 20
-            elif next_state[0] >= 0.1:
-                modified_reward += 10
-            elif next_state[0] >= 0:
-                modified_reward += 5
+            # add reward for approaching passengers
+            if next_state[0] == 1:
+                modified_reward += (1-next_state[7]) * 5 
+            else:
+                modified_reward += (1-next_state[6]) * 5 
 
             memory.append((state, action, next_state, modified_reward, is_done))
 
             if is_done:
+                print(f"Episode: {episode} Reward: {running_reward} Passengers: {pick_ups//2}")
+                estimator.replay(memory, replay_size, gamma)
                 break
-
-            estimator.replay(memory, replay_size, gamma)
 
             state = next_state
 
-        print('Episode: {}, total reward: {}, epsilon: {}'.format(episode, total_reward_episode[episode], epsilon))
-
         epsilon = max(epsilon * epsilon_decay, 0.01)
+        rewards.append(running_reward)
+        illegal_pick_ups.append(saved_rewards[1])
+        illegal_moves.append(saved_rewards[2])
+        do_nothing.append(saved_rewards[3])
+        episolons.append(epsilon)
+        n_passengers.append(pick_ups//2)
 
-n_state = env.observation_space.shape[0]
-n_action = env.action_space.n
-n_hidden = 50
+n_state = 8
+n_action = 6
+n_hidden = 64
 lr = 0.01
+
+n_episode = 250
+replay_size = 10000
+target_update = 5
+
+illegal_pick_ups = []
+illegal_moves = []
+do_nothing = []
+episolons = []
+n_passengers = []
+rewards = []
+
 dqn = DQN(n_state, n_action, n_hidden, lr)
+memory = deque(maxlen=500000)
 
+dirname = os.path.dirname(__file__)
+log_path = os.path.join(dirname, "../runs", "dqn")
+if not os.path.exists(log_path):
+    os.mkdir(log_path)
+log_folders = os.listdir(log_path)
+if len(log_folders) == 0:
+    folder_number = 0
+else:
+    folder_number = max([int(elem) for elem in log_folders]) + 1
 
-memory = deque(maxlen=10000)
+log_path = os.path.join(log_path, str(folder_number))
+os.mkdir(log_path)
+with open(os.path.join(log_path, "info.txt"), "w+") as info_file: 
+    info_file.write(env_name + "\n")
+    info_file.write("Episodes:" + str(n_episode) + "\n")
 
-n_episode = 1000
-replay_size = 20
-
-target_update = 10
-
-total_reward_episode = [0] * n_episode
 
 q_learning(env, dqn, n_episode, replay_size, target_update, gamma=.9, epsilon=1)
+dqn.save_model(log_path)
 
+from plotting import * 
 
-
-import matplotlib.pyplot as plt
-plt.plot(total_reward_episode)
-plt.title('Episode reward over time')
-plt.xlabel('Episode')
-plt.ylabel('Total reward')
-plt.show()
+plot_rewards(rewards, log_path)
+plot_rewards_and_epsilon(rewards, episolons, log_path)
+plot_rewards_and_passengers(rewards, n_passengers, log_path)
+plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves, do_nothing,log_path)
