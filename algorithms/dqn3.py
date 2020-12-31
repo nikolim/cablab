@@ -63,12 +63,12 @@ class DQN(nn.Module):
         return x
 
 
-BATCH_SIZE = 128
+BATCH_SIZE = 100
 GAMMA = 0.999
 EPS_START = 0.9
 EPS_END = 0.05
-EPS_DECAY = 200
-TARGET_UPDATE = 10
+EPS_DECAY = 0.99
+TARGET_UPDATE = 5
 
 n_actions = 4
 n_state = 8 
@@ -80,16 +80,14 @@ target_net.load_state_dict(policy_net.state_dict())
 target_net.eval()
 
 optimizer = optim.RMSprop(policy_net.parameters())
-memory = ReplayMemory(10000)
+memory = ReplayMemory(500000)
 
-steps_done = 0
+eps_threshold = EPS_START
 
-def select_action(state):
-    global steps_done
+def select_action(state, episode):
+    global eps_threshold
     sample = random.random()
-    eps_threshold = EPS_END + (EPS_START - EPS_END) * \
-        math.exp(-1. * steps_done / EPS_DECAY)
-    steps_done += 1
+    eps_threshold = EPS_END + (EPS_START * (EPS_DECAY**episode))
     if sample > eps_threshold:
         with torch.no_grad():
             q_values = policy_net(state)
@@ -107,21 +105,15 @@ def optimize_model():
     transitions = memory.sample(BATCH_SIZE)
     batch = Transition(*zip(*transitions))
 
-    non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                          batch.next_state)), device=device, dtype=torch.bool)
-    non_final_next_states = torch.stack([s for s in batch.next_state
-                                                if s is not None])
     state_batch = torch.stack(batch.state)
+    next_state_batch = torch.stack(batch.next_state)
     action_batch = torch.stack(batch.action)
     reward_batch = torch.cat(batch.reward)
 
     state_action_values = policy_net(state_batch).gather(1, action_batch)
-
-    next_state_values = torch.zeros(BATCH_SIZE, device=device)
-    next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0].detach()
+    next_state_values = target_net(next_state_batch).max(1)[0].detach()
 
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch
-
     loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
 
     optimizer.zero_grad()
@@ -130,20 +122,22 @@ def optimize_model():
         param.grad.data.clamp_(-1, 1)
     optimizer.step()
 
-    print('Optimized')
 
-
-num_episodes = 50
+num_episodes = 250
 
 for i_episode in range(num_episodes):
     
     state = env.reset()
     state = (torch.tensor(state))[:n_state]
 
+    running_reward = 0
+
     for t in count():
         # Select and perform an action
-        action = select_action(state)
+        action = select_action(state, i_episode)
         next_state, reward, done, _ = env.step(action.item())
+
+        running_reward += reward
 
         action = (torch.tensor([action.item()], device=device))
         next_state = (torch.tensor(next_state, device=device))[:8]
@@ -151,9 +145,11 @@ for i_episode in range(num_episodes):
 
         memory.push(state, action, next_state, reward)
         state = next_state
-        optimize_model()
-
+        
         if done:
+            for _ in range(100): 
+                optimize_model()
+            print(f'Episode: {i_episode} Reward: {running_reward} Episilon: {eps_threshold}')
             break
 
     # Update the target network, copying all weights and biases in DQN
