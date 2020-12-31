@@ -25,13 +25,17 @@ def actor_critic(
         running_reward = 0
         state_values = []
         state = env.reset()
+        state = tuple((list(state))[:8])
         saved_rewards = (0, 0, 0)
         pick_ups = 0
 
         while True:
             action, log_prob, state_value = estimator.get_action(state)
             next_state, reward, is_done, _ = env.step(action)
-            saved_rewards = track_reward(reward, saved_rewards)
+            next_state = tuple((list(next_state))[:8])
+
+            reward += 1
+
             running_reward += reward
             log_probs.append(log_prob)
             state_values.append(state_value)
@@ -54,18 +58,17 @@ def actor_critic(
                 returns = torch.tensor(returns)
                 returns = (returns - returns.mean()) / (returns.std() + 1e-9)
                 estimator.update(returns, log_probs, state_values, episode)
-                log_rewards(writer, saved_rewards, running_reward, episode)
                 uncertainty = sum(log_probs) * -1
                 log_reward_uncertainty(writer, running_reward, uncertainty, episode)
                 break
             state = next_state
 
 
-env = gym.make("Cabworld-v5")
-n_action = env.action_space.n
-n_episode = 3000
-n_feature = 19
-lr = 0.001
+env = gym.make("Cabworld-v6")
+n_action = 4
+n_episode = 100
+n_feature = 8
+lr = 0.01
 
 dirname = os.path.dirname(__file__)
 log_path = os.path.join(dirname, "../runs", "a2c")

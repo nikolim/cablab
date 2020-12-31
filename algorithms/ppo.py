@@ -18,7 +18,7 @@ env_name = "Cabworld-v6"
 env = gym.make(env_name)
 
 log_interval = 10
-episodes = 1000
+episodes = 100
 max_timesteps = 10000
 update_timestep = 10000
 
@@ -54,7 +54,8 @@ rewards = []
 for episode in range(episodes):
 
     state = env.reset()
-    state = feature_engineering(state)
+    #state = feature_engineering(state)
+    state = tuple((list(state))[:8])
     saved_rewards = [0, 0, 0, 0]
     episode_reward = 0
     uncertainty = None
@@ -72,14 +73,15 @@ for episode in range(episodes):
             saved_rewards[3] += 1
 
         state, reward, done, _ = env.step(action)
-        state = feature_engineering(state)
+        state = tuple((list(state))[:8])
+        #state = feature_engineering(state)
         saved_rewards = track_reward(reward, saved_rewards)
 
         if reward == 100: 
             pick_ups += 1
+            reward = 1000
 
-        # increase reward -> increase passengers 
-        reward = 1000 if reward == 100 else reward
+        reward += 1
 
         episode_reward += reward
 

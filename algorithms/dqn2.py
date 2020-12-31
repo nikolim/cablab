@@ -24,11 +24,13 @@ class DQN():
         self.model = torch.nn.Sequential(
                         torch.nn.Linear(n_state, n_hidden),
                         torch.nn.ReLU(),
+                        torch.nn.Linear(n_hidden, n_hidden),
+                        torch.nn.ReLU(),
                         torch.nn.Linear(n_hidden, n_action)
                 )
+
         self.model_target = copy.deepcopy(self.model)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
-
         self.losses = []
 
     def update(self, s, y):
@@ -109,10 +111,19 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1
         saved_rewards = [0, 0, 0, 0]
         running_reward = 0
         pick_ups = 0
+        number_of_action_4 = 0
+        number_of_action_5 = 0
 
         while not is_done:
 
             action = policy(state)
+
+            if action == 4: 
+                number_of_action_4 += 1
+            
+            if action == 5: 
+                number_of_action_5 += 1
+
             if action == 6: 
                 saved_rewards[3] += 1
 
@@ -122,20 +133,21 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1
 
             if reward == 100: 
                 pick_ups += 1
-                reward = 100000
-    
+                reward = 1000
+
             running_reward += reward
             
             memory.append((state, action, next_state, reward, is_done))
 
             if is_done:
                 estimator.replay(memory, replay_size, gamma)
-                print(f"Episode: {episode} Reward: {running_reward} Passengers: {pick_ups//2}")
+                print(f"Episode: {episode} Reward: {running_reward} Passengers: {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5}") 
                 break
 
             state = next_state
 
         epsilon = max(epsilon * epsilon_decay, 0.01)
+
         rewards.append(running_reward)
         illegal_pick_ups.append(saved_rewards[1])
         illegal_moves.append(saved_rewards[2])
@@ -146,8 +158,8 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1
 
 n_state = 8
 n_action = 6
-n_hidden = 64
-lr = 0.01
+n_hidden = 32
+lr = 0.001
 
 n_episode = 500
 replay_size = 10000
@@ -181,7 +193,7 @@ with open(os.path.join(log_path, "info.txt"), "w+") as info_file:
     info_file.write("Episodes:" + str(n_episode) + "\n")
 
 
-q_learning(env, dqn, n_episode, replay_size, target_update, gamma=.999, epsilon=0.5)
+q_learning(env, dqn, n_episode, replay_size, target_update, gamma=.1, epsilon=0.5)
 
 dqn.save_model(log_path)
 

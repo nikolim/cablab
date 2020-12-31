@@ -7,9 +7,11 @@ import torch.nn.functional as F
 class ActorCriticModel(nn.Module):
     def __init__(self):
         super(ActorCriticModel, self).__init__()
-        self.fc1 = nn.Linear(19, 64)
+        self.fc1 = nn.Linear(8, 64)
+
         self.action1 = nn.Linear(64, 64)
-        self.action2 = nn.Linear(64, 5)
+        self.action2 = nn.Linear(64, 4)
+
         self.value1 = nn.Linear(64, 64)
         self.value2 = nn.Linear(64, 1)
 
@@ -24,7 +26,6 @@ class ActorCriticModel(nn.Module):
         state_values = self.value2(value_x)
 
         return action_probs, state_values
-
 
 class PolicyNetwork:
     def __init__(self, writer):
