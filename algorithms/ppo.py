@@ -18,7 +18,7 @@ env_name = "Cabworld-v6"
 env = gym.make(env_name)
 
 log_interval = 10
-episodes = 100
+episodes = 10
 max_timesteps = 10000
 update_timestep = 10000
 

@@ -267,7 +267,7 @@ def optimize_model():
 # In[8]:
 
 
-num_episodes = 10
+num_episodes = 1000
 for i_episode in range(num_episodes):
     # Initialize the environment and state
     env.reset()
@@ -298,6 +298,7 @@ for i_episode in range(num_episodes):
         optimize_model()
         if done:
             break
+        
     # Update the target network, copying all weights and biases in DQN
     if i_episode % TARGET_UPDATE == 0:
         target_net.load_state_dict(policy_net.state_dict())

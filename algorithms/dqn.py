@@ -16,7 +16,7 @@ from dqn_model import DQN, gen_epsilon_greedy_policy
 from pyvirtualdisplay import Display
 disp = Display().start()
 
-def q_learning(env, estimator, n_episode, target_update=5, gamma=1.0, epsilon=0.1, epsilon_decay=0.95):
+def q_learning(env, estimator, n_episode, target_update=5, gamma=1.0, epsilon=0.1, epsilon_decay=0.999):
 
     for episode in range(n_episode):
 
@@ -69,15 +69,15 @@ def q_learning(env, estimator, n_episode, target_update=5, gamma=1.0, epsilon=0.
 
 
 torch.manual_seed(42)
-env_name = "MountainCar-v0"
+env_name = "CartPole-v1"
 env = gym.make(env_name)
 
 n_action = env.action_space.n
-n_episode = 10000
+n_episode = 1000
 n_feature = env.observation_space.shape[0]
 lr = 0.01
 n_hidden = 64
-memory = deque(maxlen=10000)
+memory = deque(maxlen=50000)
 replay_size = 10
 
 dirname = os.path.dirname(__file__)

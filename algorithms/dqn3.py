@@ -18,7 +18,7 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 
 import gym_cabworld
-env = gym.make('Cabworld-v6')
+env = gym.make('CartPole-v0')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -56,7 +56,7 @@ class DQN(nn.Module):
         self.output = torch.nn.Linear(n_hidden, n_actions)
 
     def forward(self, x):
-        x = F.relu(self.input(x))
+        x = F.relu(self.input(x.float()))
         x = F.relu(self.hidden(x))
         x = F.relu(self.output(x))
         x = x.view(x.size(0), -1)
@@ -70,8 +70,8 @@ EPS_END = 0.05
 EPS_DECAY = 0.99
 TARGET_UPDATE = 5
 
-n_actions = 4
-n_state = 8 
+n_actions = 2
+n_state = 4 
 
 policy_net = DQN(n_state, n_actions).to(device)
 target_net = DQN(n_state, n_actions).to(device)
@@ -118,12 +118,10 @@ def optimize_model():
 
     optimizer.zero_grad()
     loss.backward()
-    for param in policy_net.parameters():
-        param.grad.data.clamp_(-1, 1)
     optimizer.step()
 
 
-num_episodes = 250
+num_episodes = 10000
 
 for i_episode in range(num_episodes):
     
@@ -146,9 +144,9 @@ for i_episode in range(num_episodes):
         memory.push(state, action, next_state, reward)
         state = next_state
         
+        optimize_model()
+
         if done:
-            for _ in range(100): 
-                optimize_model()
             print(f'Episode: {i_episode} Reward: {running_reward} Episilon: {eps_threshold}')
             break
 

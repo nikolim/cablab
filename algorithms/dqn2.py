@@ -14,17 +14,14 @@ from features import feature_engineering
 
 import gym_cabworld
 
-env_name = "Cabworld-v6"
+env_name = "CartPole-v1"
 env = gym.envs.make(env_name)
-
 
 class DQN():
     def __init__(self, n_state, n_action, n_hidden=32, lr=0.05):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
                         torch.nn.Linear(n_state, n_hidden),
-                        torch.nn.ReLU(),
-                        torch.nn.Linear(n_hidden, n_hidden),
                         torch.nn.ReLU(),
                         torch.nn.Linear(n_hidden, n_action)
                 )
@@ -97,9 +94,8 @@ def gen_epsilon_greedy_policy(estimator, epsilon, n_action):
 def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1.0, epsilon=0.1, epsilon_decay=.99):
     for episode in range(n_episode):
 
-        # for debugging
-        global counter
-        counter = episode
+        global counter 
+        counter += 1
 
         if episode % target_update == 0:
             estimator.copy_target()
@@ -139,8 +135,9 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1
             
             memory.append((state, action, next_state, reward, is_done))
 
+            estimator.replay(memory, replay_size, gamma)
+
             if is_done:
-                estimator.replay(memory, replay_size, gamma)
                 print(f"Episode: {episode} Reward: {running_reward} Passengers: {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5}") 
                 break
 
@@ -156,15 +153,16 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1
         n_passengers.append(pick_ups//2)
 
 
-n_state = 8
-n_action = 6
-n_hidden = 32
-lr = 0.001
-
-n_episode = 500
-replay_size = 10000
-target_update = 5
 counter = 0
+
+n_state = 4
+n_action = 2
+n_hidden = 32
+lr = 0.01
+
+n_episode = 10
+replay_size = 10
+target_update = 5
 
 illegal_pick_ups = []
 illegal_moves = []
@@ -174,7 +172,7 @@ n_passengers = []
 rewards = []
 
 dqn = DQN(n_state, n_action, n_hidden, lr)
-memory = deque(maxlen=500000)
+memory = deque(maxlen=50000)
 
 dirname = os.path.dirname(__file__)
 log_path = os.path.join(dirname, "../runs", "dqn")
@@ -193,13 +191,12 @@ with open(os.path.join(log_path, "info.txt"), "w+") as info_file:
     info_file.write("Episodes:" + str(n_episode) + "\n")
 
 
-q_learning(env, dqn, n_episode, replay_size, target_update, gamma=.1, epsilon=0.5)
-
+q_learning(env, dqn, n_episode, replay_size, target_update, gamma=.99, epsilon=1)
 dqn.save_model(log_path)
 
 from plotting import * 
 
-plot_rewards(dqn.losses, log_path)
+plot_rewards(rewards, log_path)
 plot_rewards_and_epsilon(rewards, episolons, log_path)
 plot_rewards_and_passengers(rewards, n_passengers, log_path)
 plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves, do_nothing,log_path)

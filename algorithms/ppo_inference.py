@@ -15,7 +15,6 @@ ppo = PPO()
 
 ppo.load_model('../runs/ppo/24/ppo.pth')
 
-
 def euclidean_distance(p1, p2): 
     return round(math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)/math.sqrt(2), 5)
 
