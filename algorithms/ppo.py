@@ -13,11 +13,11 @@ from pyvirtualdisplay import Display
 disp = Display().start()
 
 torch.manual_seed(42)
-env_name = "Cabworld-v6"
+env_name = "Assault-ram-v0"
 env = gym.make(env_name)
 
-n_state = 20 
-n_actions = 6
+n_state = 128 
+n_actions = 7
 episodes = 500
 max_timesteps = 10000
 
@@ -48,11 +48,15 @@ entropys = []
 n_passengers = []
 rewards = []
 
+def normalize_array(ar): 
+    divide_256 = lambda x: round((x/256),4)
+    new_arr = map(divide_256, ar)
+    return list(new_arr)
+
 for episode in range(episodes):
 
     state = env.reset()
-    #state = feature_engineering(state)
-    #state = tuple((list(state))[:n_state])
+    state = normalize_array(state)
     saved_rewards = [0, 0, 0, 0]
     episode_reward = 0
     uncertainty = None
@@ -64,31 +68,14 @@ for episode in range(episodes):
     number_of_action_5 = 0
     wrong_pick_up_or_drop_off = 0
 
-    for t in range(max_timesteps):
+    while True:
+
         n_steps += 1
         action = ppo.policy_old.act(state, memory)
 
-        if action == 5: 
-            saved_rewards[3] += 1
-
         state, reward, done, _ = env.step(action)
-        #state = tuple((list(state))[:n_state])
-        #state = feature_engineering(state)
+        state = normalize_array(state)
         saved_rewards = track_reward(reward, saved_rewards)
-
-        if action == 4: 
-                number_of_action_4 += 1
-        if action == 5: 
-            number_of_action_5 += 1
-        if action == 6: 
-            saved_rewards[3] += 1
-        
-        if reward == -10: 
-            wrong_pick_up_or_drop_off += 1
-
-        if reward == 100: 
-            pick_ups += 1
-            reward = 1000
 
         episode_reward += reward
         memory.rewards.append(reward)
@@ -98,21 +85,8 @@ for episode in range(episodes):
             mean_entropy = ppo.update(memory, episode)
             mean_entropy = round(mean_entropy, 3)
             memory.clear()
-            print(f"Episode: {episode} Reward: {episode_reward} Passengers {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Entropy {mean_entropy} Illegal-Pick-Ups {wrong_pick_up_or_drop_off}")
+            print(f"Episode: {episode} Reward: {episode_reward}") 
             break
     
-    rewards.append(episode_reward)
-    illegal_pick_ups.append(saved_rewards[1])
-    illegal_moves.append(saved_rewards[2])
-    do_nothing.append(saved_rewards[3])
-    entropys.append(mean_entropy)
-    n_passengers.append(pick_ups//2)
-
 ppo.save_model(log_path)
 
-from plotting import * 
-
-plot_rewards(rewards, log_path)
-plot_rewards_and_entropy(rewards, entropys, log_path)
-plot_rewards_and_passengers(rewards, n_passengers, log_path)
-plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves, do_nothing,log_path)

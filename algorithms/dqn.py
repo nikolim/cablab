@@ -18,8 +18,13 @@ disp = Display().start()
 
 import gym_cabworld
 
-env_name = "Cabworld-v6"
+env_name = "Assault-ram-v0"
 env = gym.envs.make(env_name)
+
+def normalize_array(ar): 
+    divide_256 = lambda x: round((x/256),4)
+    new_arr = map(divide_256, ar)
+    return list(new_arr)
 
 def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1.0, epsilon=0.1, epsilon_decay=.99):
     for episode in range(n_episode):
@@ -31,64 +36,32 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1
 
         policy = gen_epsilon_greedy_policy(estimator, epsilon, n_action)
         state = env.reset()
-        #state = feature_engineering(state)
-        state = tuple((list(env.reset()))[:n_state])
+        state = normalize_array(state)
         is_done = False
-
-        saved_rewards = [0, 0, 0, 0]
         running_reward = 0
-        pick_ups = 0
-        number_of_action_4 = 0
-        number_of_action_5 = 0
-        wrong_pick_up_or_drop_off = 0
-
 
         while not is_done:
             action = policy(state)
 
-            if action == 4: 
-                number_of_action_4 += 1
-            if action == 5: 
-                number_of_action_5 += 1
-            if action == 6: 
-                saved_rewards[3] += 1
-
             next_state, reward, is_done, _ = env.step(action)
-            next_state = tuple((list(next_state))[:n_state])
-            #next_state = feature_engineering(next_state)
-            saved_rewards = track_reward(reward, saved_rewards)
+            next_state = normalize_array(next_state)
 
-            if reward == -10: 
-                wrong_pick_up_or_drop_off += 1
-
-            if reward == 100: 
-                pick_ups += 1
-                reward = 1000
-
-            running_reward += reward
-            
+            running_reward += reward            
             memory.append((state, action, next_state, reward, is_done))
             
             if is_done:
+                print(f'Epsisode: {episode} Reward: {running_reward}')
                 estimator.replay(memory, replay_size, gamma)
-                print(f"Episode: {episode} Reward: {running_reward} Passengers: {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Illegal-Pick-Ups {wrong_pick_up_or_drop_off}") 
                 break
 
             state = next_state
 
         epsilon = max(epsilon * epsilon_decay, 0.01)
 
-        rewards.append(running_reward)
-        illegal_pick_ups.append(saved_rewards[1])
-        illegal_moves.append(saved_rewards[2])
-        do_nothing.append(saved_rewards[3])
-        episolons.append(epsilon)
-        n_passengers.append(pick_ups//2)
-
 counter = 0
-n_state = 6
-n_action = 6
-n_hidden = 32
+n_state = 128
+n_action = 7
+n_hidden = 128
 lr = 0.001
 
 n_episode = 500
@@ -124,10 +97,3 @@ with open(os.path.join(log_path, "info.txt"), "w+") as info_file:
 
 q_learning(env, dqn, n_episode, replay_size, target_update, gamma=.99, epsilon=1)
 dqn.save_model(log_path)
-
-from plotting import * 
-
-plot_rewards(rewards, log_path)
-plot_rewards_and_epsilon(rewards, episolons, log_path)
-plot_rewards_and_passengers(rewards, n_passengers, log_path)
-plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves, do_nothing,log_path)

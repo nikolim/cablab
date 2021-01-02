@@ -8,10 +8,14 @@ random.seed(0)
 torch.manual_seed(0)
 
 class DQN():
-    def __init__(self, n_state, n_action, n_hidden=32, lr=0.0001):
+    def __init__(self, n_state, n_action, n_hidden=128, lr=0.0001):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
-                        torch.nn.Linear(n_state, n_action)
+                        torch.nn.Linear(n_state, 2*n_hidden),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(2*n_hidden, n_hidden),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(n_hidden, n_action)
                 )
         self.model_target = copy.deepcopy(self.model)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
