@@ -26,28 +26,24 @@ class Memory:
 
 
 class ActorCritic(nn.Module):
-    def __init__(self):
+    def __init__(self, n_state, n_actions):
         super(ActorCritic, self).__init__()
 
         self.actor = nn.Sequential(
-            nn.Linear(8, 64),
+            nn.Linear(n_state, 32),
             nn.Tanh(),
-            nn.Linear(64, 64),
+            nn.Linear(32, 32),
             nn.Tanh(),
-            nn.Linear(64, 64),
-            nn.Tanh(),
-            nn.Linear(64, 6),
+            nn.Linear(32, n_actions),
             nn.Softmax(dim=-1),
         )
 
         self.critic = nn.Sequential(
-            nn.Linear(8, 64),
+            nn.Linear(n_state, 32),
             nn.Tanh(),
-            nn.Linear(64, 64),
+            nn.Linear(32, 32),
             nn.Tanh(),
-            nn.Linear(64, 64),
-            nn.Tanh(),
-            nn.Linear(64, 1),
+            nn.Linear(32, 1),
         )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -83,7 +79,7 @@ class ActorCritic(nn.Module):
 
 
 class PPO:
-    def __init__(self):
+    def __init__(self, n_state, n_actions):
         self.lr = 0.001
         self.betas = (0.9, 0.999)
         self.gamma = 0.99
@@ -91,11 +87,11 @@ class PPO:
         self.K_epochs = 4
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.policy = ActorCritic().to(self.device)
+        self.policy = ActorCritic(n_state, n_actions).to(self.device)
         self.optimizer = torch.optim.Adam(
             self.policy.parameters(), lr=self.lr, betas=self.betas
         )
-        self.policy_old = ActorCritic().to(self.device)
+        self.policy_old = ActorCritic(n_state, n_actions).to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
 
         self.MseLoss = nn.MSELoss()

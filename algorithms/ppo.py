@@ -10,20 +10,19 @@ from plotting import *
 from features import *
 
 from pyvirtualdisplay import Display
-
 disp = Display().start()
 
 torch.manual_seed(42)
 env_name = "Cabworld-v6"
 env = gym.make(env_name)
 
-log_interval = 10
-episodes = 10
+n_state = 20 
+n_actions = 6
+episodes = 500
 max_timesteps = 10000
-update_timestep = 10000
 
 memory = Memory()
-ppo = PPO()
+ppo = PPO(n_state, n_actions)
 
 dirname = os.path.dirname(__file__)
 log_path = os.path.join(dirname, "../runs", "ppo")
@@ -42,8 +41,6 @@ with open(os.path.join(log_path, "info.txt"), "w+") as info_file:
     info_file.write(env_name + "\n")
     info_file.write("Episodes:" + str(episodes) + "\n")
 
-timestep = 0
-
 illegal_pick_ups = []
 illegal_moves = []
 do_nothing = []
@@ -55,7 +52,7 @@ for episode in range(episodes):
 
     state = env.reset()
     #state = feature_engineering(state)
-    state = tuple((list(state))[:8])
+    #state = tuple((list(state))[:n_state])
     saved_rewards = [0, 0, 0, 0]
     episode_reward = 0
     uncertainty = None
@@ -63,9 +60,11 @@ for episode in range(episodes):
     pick_ups = 0
     mean_entropy = 0
 
-    for t in range(max_timesteps):
+    number_of_action_4 = 0
+    number_of_action_5 = 0
+    wrong_pick_up_or_drop_off = 0
 
-        timestep += 1
+    for t in range(max_timesteps):
         n_steps += 1
         action = ppo.policy_old.act(state, memory)
 
@@ -73,28 +72,33 @@ for episode in range(episodes):
             saved_rewards[3] += 1
 
         state, reward, done, _ = env.step(action)
-        state = tuple((list(state))[:8])
+        #state = tuple((list(state))[:n_state])
         #state = feature_engineering(state)
         saved_rewards = track_reward(reward, saved_rewards)
+
+        if action == 4: 
+                number_of_action_4 += 1
+        if action == 5: 
+            number_of_action_5 += 1
+        if action == 6: 
+            saved_rewards[3] += 1
+        
+        if reward == -10: 
+            wrong_pick_up_or_drop_off += 1
 
         if reward == 100: 
             pick_ups += 1
             reward = 1000
 
-        reward += 1
-
         episode_reward += reward
-
         memory.rewards.append(reward)
         memory.is_terminal.append(done)
 
-        if timestep % update_timestep == 0:
-            mean_entropy = ppo.update(memory, episode)
-            memory.clear()
-            timestep = 0
-
         if done:
-            print(f"Episode: {episode} Reward: {episode_reward} Steps {n_steps} Passengers {pick_ups//2} Entropy {mean_entropy}")
+            mean_entropy = ppo.update(memory, episode)
+            mean_entropy = round(mean_entropy, 3)
+            memory.clear()
+            print(f"Episode: {episode} Reward: {episode_reward} Passengers {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Entropy {mean_entropy} Illegal-Pick-Ups {wrong_pick_up_or_drop_off}")
             break
     
     rewards.append(episode_reward)

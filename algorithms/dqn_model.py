@@ -7,23 +7,20 @@ import os
 random.seed(0)
 torch.manual_seed(0)
 
-
-class DQN:
-    def __init__(self, n_state, n_action, n_hidden=64, lr=0.01):
+class DQN():
+    def __init__(self, n_state, n_action, n_hidden=32, lr=0.0001):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
-            torch.nn.Linear(n_state, 32),
-            torch.nn.ReLU(),
-            torch.nn.Linear(32, 32),
-            torch.nn.ReLU(),
-            torch.nn.Linear(32, n_action),
-        )
+                        torch.nn.Linear(n_state, n_action)
+                )
         self.model_target = copy.deepcopy(self.model)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
+        self.losses = []
 
     def update(self, s, y):
         y_pred = self.model(torch.Tensor(s))
         loss = self.criterion(y_pred, Variable(torch.Tensor(y)))
+        self.losses.append(loss.item())
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
@@ -35,12 +32,14 @@ class DQN:
     def target_predict(self, s):
         with torch.no_grad():
             return self.model_target(torch.Tensor(s))
-    
+
     def replay(self, memory, replay_size, gamma):
         if len(memory) >= replay_size:
             replay_data = random.sample(memory, replay_size)
+
             states = []
             td_targets = []
+
             for state, action, next_state, reward, is_done in replay_data:
                 states.append(state)
                 q_values = self.predict(state).tolist()
@@ -49,7 +48,9 @@ class DQN:
                 else:
                     q_values_next = self.target_predict(next_state).detach()
                     q_values[action] = reward + gamma * torch.max(q_values_next).item()
+
                 td_targets.append(q_values)
+
             self.update(states, td_targets)
 
     def copy_target(self):
@@ -64,6 +65,11 @@ class DQN:
         self.model.load_state_dict(torch.load(path, map_location=self.device))
         self.model.eval()
         print(f"Model loaded {path}")
+
+    def deploy(self, s):
+        with torch.no_grad():
+            q_values = self.model(torch.Tensor(s))
+            return (torch.argmax(q_values)).item()
 
 def gen_epsilon_greedy_policy(estimator, epsilon, n_action):
     def policy_function(state):
