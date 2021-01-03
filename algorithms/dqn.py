@@ -21,11 +21,9 @@ import gym_cabworld
 env_name = "Cabworld-v6"
 env = gym.envs.make(env_name)
 
-def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1.0, epsilon=0.1, epsilon_decay=.99):
+def q_learning(env, estimator, n_episode, replay_size, target_update=5, gamma=0.99, epsilon=0.1, epsilon_decay=.99):
     for episode in range(n_episode):
 
-        global counter 
-        counter += 1
         if episode % target_update == 0:
             estimator.copy_target()
 
@@ -42,9 +40,11 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1
         number_of_action_5 = 0
         wrong_pick_up_or_drop_off = 0
 
+        steps = 0
 
         while not is_done:
             action = policy(state)
+            steps += 1
 
             if action == 4: 
                 number_of_action_4 += 1
@@ -63,15 +63,16 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1
 
             if reward == 100: 
                 pick_ups += 1
-                reward = 1000
 
             running_reward += reward
             
             memory.append((state, action, next_state, reward, is_done))
             
-            if is_done:
+            if steps % 5 == 0:
                 estimator.replay(memory, replay_size, gamma)
-                print(f"Episode: {episode} Reward: {running_reward} Passengers: {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Illegal-Pick-Ups {wrong_pick_up_or_drop_off}") 
+
+            if is_done:
+                print(f"Episode: {episode} Reward: {running_reward} Passengers: {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Illegal-Pick-Ups {wrong_pick_up_or_drop_off} Epsilon {epsilon}") 
                 break
 
             state = next_state
@@ -83,16 +84,17 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=10, gamma=1
         illegal_moves.append(saved_rewards[2])
         do_nothing.append(saved_rewards[3])
         episolons.append(epsilon)
+
         n_passengers.append(pick_ups//2)
 
 counter = 0
-n_state = 6
-n_action = 6
+n_state = 8
+n_action = 4
 n_hidden = 32
 lr = 0.001
 
-n_episode = 500
-replay_size = 10000
+n_episode = 100
+replay_size = 10
 target_update = 5
 
 illegal_pick_ups = []

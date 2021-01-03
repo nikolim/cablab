@@ -4,17 +4,24 @@ import random
 import copy
 import os
 
-random.seed(0)
+#random.seed(0)
 torch.manual_seed(0)
 
+counter = 0
+
 class DQN():
-    def __init__(self, n_state, n_action, n_hidden=32, lr=0.0001):
+    def __init__(self, n_state, n_action, n_hidden=32, lr=0.001):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
-                        torch.nn.Linear(n_state, n_action)
+                        torch.nn.Linear(n_state, n_hidden),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(n_hidden, n_hidden),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(n_hidden, n_action),
                 )
         self.model_target = copy.deepcopy(self.model)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.losses = []
 
     def update(self, s, y):
@@ -39,18 +46,17 @@ class DQN():
 
             states = []
             td_targets = []
-
             for state, action, next_state, reward, is_done in replay_data:
                 states.append(state)
                 q_values = self.predict(state).tolist()
+                
                 if is_done:
                     q_values[action] = reward
                 else:
                     q_values_next = self.target_predict(next_state).detach()
                     q_values[action] = reward + gamma * torch.max(q_values_next).item()
-
                 td_targets.append(q_values)
-
+                #self.update(state, q_values)
             self.update(states, td_targets)
 
     def copy_target(self):
@@ -77,5 +83,6 @@ def gen_epsilon_greedy_policy(estimator, epsilon, n_action):
             return random.randint(0, n_action - 1)
         else:
             q_values = estimator.predict(state)
-            return torch.argmax(q_values).item()
+            action = torch.argmax(q_values).item()
+            return action
     return policy_function
