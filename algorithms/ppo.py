@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 import gym
 import math
 import gym_cabworld
@@ -16,8 +17,8 @@ torch.manual_seed(42)
 env_name = "Cabworld-v6"
 env = gym.make(env_name)
 
-n_state = 8 
-n_actions = 4
+n_state = 26 
+n_actions = 6
 episodes = 300
 max_timesteps = 10000
 
@@ -47,12 +48,14 @@ do_nothing = []
 entropys = []
 n_passengers = []
 rewards = []
+mean_pick_up_path = []
+mean_drop_off_path = []
 
 for episode in range(episodes):
 
     state = env.reset()
-    #state = feature_engineering(state)
-    state = tuple((list(state))[:n_state])
+    state = feature_engineering(state)
+    #state = tuple((list(state))[:n_state])
     saved_rewards = [0, 0, 0, 0]
     episode_reward = 0
     uncertainty = None
@@ -64,6 +67,12 @@ for episode in range(episodes):
     number_of_action_5 = 0
     wrong_pick_up_or_drop_off = 0
 
+    passenger = False 
+    pick_up_drop_off_steps = []
+    drop_off_pick_up_steps = []
+    passenger_steps = 0
+    no_passenger_steps = 0
+
     for t in range(max_timesteps):
         n_steps += 1
         action = ppo.policy_old.act(state, memory)
@@ -72,9 +81,14 @@ for episode in range(episodes):
             saved_rewards[3] += 1
 
         state, reward, done, _ = env.step(action)
-        state = tuple((list(state))[:n_state])
-        #state = feature_engineering(state)
+        #state = tuple((list(state))[:n_state])
+        state = feature_engineering(state)
         saved_rewards = track_reward(reward, saved_rewards)
+
+        if passenger: 
+            passenger_steps += 1 
+        else: 
+            no_passenger_steps += 1
 
         if action == 4: 
                 number_of_action_4 += 1
@@ -82,11 +96,21 @@ for episode in range(episodes):
             number_of_action_5 += 1
         if action == 6: 
             saved_rewards[3] += 1
-        
+
         if reward == -10: 
             wrong_pick_up_or_drop_off += 1
 
         if reward == 100: 
+            if passenger: 
+                #drop-off 
+                drop_off_pick_up_steps.append(no_passenger_steps)
+                no_passenger_steps = 0
+            else: 
+                #pick-up
+                pick_up_drop_off_steps.append(passenger_steps)
+                passenger_steps = 0
+
+            passenger = not passenger
             pick_ups += 1
             reward = 1000
 
@@ -107,6 +131,8 @@ for episode in range(episodes):
     do_nothing.append(saved_rewards[3])
     entropys.append(mean_entropy)
     n_passengers.append(pick_ups//2)
+    mean_pick_up_path.append((np.array(drop_off_pick_up_steps).mean()))
+    mean_drop_off_path.append((np.array(pick_up_drop_off_steps).mean()))
 
 ppo.save_model(log_path)
 
@@ -116,3 +142,4 @@ plot_rewards(rewards, log_path)
 plot_rewards_and_entropy(rewards, entropys, log_path)
 plot_rewards_and_passengers(rewards, n_passengers, log_path)
 plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves, do_nothing,log_path)
+plot_mean_pick_up_drop_offs(mean_pick_up_path, mean_drop_off_path, log_path)

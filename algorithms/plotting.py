@@ -97,6 +97,26 @@ def plot_rewards_and_illegal_actions(rewards, illegal_drop_offs, illegal_moves, 
     plt.savefig(os.path.join(path,'rewards_illegal_actions.png'))
 
 
+def plot_mean_pick_up_drop_offs(pick_up_mean, drop_off_mean, path):
+
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    ax1.tick_params(axis='y')
+    ax2.tick_params(axis='y')
+
+    ax1.set_xlabel('Episodes')
+
+    ax1.set_ylabel('Pick-Up-Steps', color=ILLEGAL_PICK_UP_COLOR)
+    ax1.plot(pick_up_mean, color=ILLEGAL_PICK_UP_COLOR, label='Pick-Up-Steps')
+
+    ax2.set_ylabel('Drop-Off-Steps', color=ILLEGAL_MOVE_COLOR)
+    ax2.plot(drop_off_mean, color=ILLEGAL_MOVE_COLOR, label='Drop-Off-Steps')
+    
+    #plt.legend(loc='best')
+    fig.tight_layout()
+    plt.savefig(os.path.join(path,'pick_up_drop_off_path.png'))
+
+
 test = np.array([1,2,3,4,5,6,7,8,9])
 test2 = np.invert(test)
 

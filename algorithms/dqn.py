@@ -2,6 +2,7 @@
 import os
 import gym
 import torch
+import numpy as np
 
 from collections import deque
 import random
@@ -40,11 +41,22 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=5, gamma=0.
         number_of_action_5 = 0
         wrong_pick_up_or_drop_off = 0
 
+        passenger = False 
+        pick_up_drop_off_steps = []
+        drop_off_pick_up_steps = []
+        passenger_steps = 0
+        no_passenger_steps = 0
+
         steps = 0
 
         while not is_done:
             action = policy(state)
             steps += 1
+
+            if passenger: 
+                passenger_steps += 1 
+            else: 
+                no_passenger_steps += 1
 
             if action == 4: 
                 number_of_action_4 += 1
@@ -62,7 +74,18 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=5, gamma=0.
                 wrong_pick_up_or_drop_off += 1
 
             if reward == 100: 
+                if passenger: 
+                    #drop-off 
+                    drop_off_pick_up_steps.append(no_passenger_steps)
+                    no_passenger_steps = 0
+                else: 
+                    #pick-up
+                    pick_up_drop_off_steps.append(passenger_steps)
+                    passenger_steps = 0
+
+                passenger = not passenger
                 pick_ups += 1
+                reward = 1000
 
             running_reward += reward
             
@@ -84,16 +107,17 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=5, gamma=0.
         illegal_moves.append(saved_rewards[2])
         do_nothing.append(saved_rewards[3])
         episolons.append(epsilon)
-
         n_passengers.append(pick_ups//2)
+        mean_pick_up_path.append((np.array(drop_off_pick_up_steps).mean()))
+        mean_drop_off_path.append((np.array(pick_up_drop_off_steps).mean()))
 
 counter = 0
-n_state = 8
-n_action = 4
+n_state = 20
+n_action = 6
 n_hidden = 32
-lr = 0.001
+lr = 0.01
 
-n_episode = 100
+n_episode = 300
 replay_size = 10
 target_update = 5
 
@@ -103,6 +127,8 @@ do_nothing = []
 episolons = []
 n_passengers = []
 rewards = []
+mean_pick_up_path = []
+mean_drop_off_path = []
 
 dqn = DQN(n_state, n_action, n_hidden, lr)
 memory = deque(maxlen=500000)
@@ -133,3 +159,4 @@ plot_rewards(rewards, log_path)
 plot_rewards_and_epsilon(rewards, episolons, log_path)
 plot_rewards_and_passengers(rewards, n_passengers, log_path)
 plot_rewards_and_illegal_actions(rewards, illegal_pick_ups, illegal_moves, do_nothing,log_path)
+plot_mean_pick_up_drop_offs(mean_pick_up_path, mean_drop_off_path, log_path)

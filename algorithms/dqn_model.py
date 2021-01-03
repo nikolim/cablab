@@ -10,7 +10,7 @@ torch.manual_seed(0)
 counter = 0
 
 class DQN():
-    def __init__(self, n_state, n_action, n_hidden=32, lr=0.001):
+    def __init__(self, n_state, n_action, n_hidden=32, lr=0.01):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
                         torch.nn.Linear(n_state, n_hidden),
