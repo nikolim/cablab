@@ -30,8 +30,8 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=5, gamma=0.
 
         policy = gen_epsilon_greedy_policy(estimator, epsilon, n_action)
         state = env.reset()
-        #state = feature_engineering(state)
-        state = tuple((list(env.reset()))[:n_state])
+        state = feature_engineering(state)
+        #state = tuple((list(env.reset()))[:n_state])
         is_done = False
 
         saved_rewards = [0, 0, 0, 0]
@@ -66,8 +66,8 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=5, gamma=0.
                 saved_rewards[3] += 1
 
             next_state, reward, is_done, _ = env.step(action)
-            next_state = tuple((list(next_state))[:n_state])
-            #next_state = feature_engineering(next_state)
+            #next_state = tuple((list(next_state))[:n_state])
+            next_state = feature_engineering(next_state)
             saved_rewards = track_reward(reward, saved_rewards)
 
             if reward == -10: 
@@ -112,13 +112,13 @@ def q_learning(env, estimator, n_episode, replay_size, target_update=5, gamma=0.
         mean_drop_off_path.append((np.array(pick_up_drop_off_steps).mean()))
 
 counter = 0
-n_state = 20
+n_state = 26
 n_action = 6
 n_hidden = 32
 lr = 0.01
 
 n_episode = 300
-replay_size = 10
+replay_size = 5
 target_update = 5
 
 illegal_pick_ups = []

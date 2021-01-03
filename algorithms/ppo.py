@@ -17,7 +17,7 @@ torch.manual_seed(42)
 env_name = "Cabworld-v6"
 env = gym.make(env_name)
 
-n_state = 26 
+n_state = 12 
 n_actions = 6
 episodes = 300
 max_timesteps = 10000
@@ -54,8 +54,8 @@ mean_drop_off_path = []
 for episode in range(episodes):
 
     state = env.reset()
-    state = feature_engineering(state)
-    #state = tuple((list(state))[:n_state])
+    #state = feature_engineering(state)
+    state = tuple((list(state))[:n_state])
     saved_rewards = [0, 0, 0, 0]
     episode_reward = 0
     uncertainty = None
@@ -77,12 +77,9 @@ for episode in range(episodes):
         n_steps += 1
         action = ppo.policy_old.act(state, memory)
 
-        if action == 5: 
-            saved_rewards[3] += 1
-
         state, reward, done, _ = env.step(action)
-        #state = tuple((list(state))[:n_state])
-        state = feature_engineering(state)
+        state = tuple((list(state))[:n_state])
+        #state = feature_engineering(state)
         saved_rewards = track_reward(reward, saved_rewards)
 
         if passenger: 

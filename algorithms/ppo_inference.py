@@ -25,7 +25,7 @@ for episode in range(episodes):
 
     for _ in range(max_timesteps):
 
-        state = feature_engineering(state)
+        #state = feature_engineering(state)
         action = ppo.policy.deploy(state)
         state, reward, done, _ = env.step(action)
         episode_reward += reward
