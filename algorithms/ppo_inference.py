@@ -16,7 +16,7 @@ episodes = 5
 max_timesteps = 10000
 ppo = PPO()
 
-ppo.load_model('../runs/ppo/24/ppo.pth')
+ppo.load_model("../runs/ppo/24/ppo.pth")
 
 for episode in range(episodes):
 
@@ -25,15 +25,14 @@ for episode in range(episodes):
 
     for _ in range(max_timesteps):
 
-        #state = feature_engineering(state)
+        # state = feature_engineering(state)
         action = ppo.policy.deploy(state)
         state, reward, done, _ = env.step(action)
         episode_reward += reward
 
         env.render()
-        #time.sleep(0.05)
+        # time.sleep(0.05)
 
         if done:
             print(f"Reward {episode_reward}")
             break
-    

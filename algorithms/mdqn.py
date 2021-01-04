@@ -1,32 +1,57 @@
 import os
 import torch
+import torch.nn as nn
 import numpy as np
+import torch.optim as optim
+import torch.nn.functional as F
+from torch.nn.utils import clip_grad_norm_
+from collections import deque, namedtuple
+
 import gym
-import math
 import gym_cabworld
-from torch.utils.tensorboard import SummaryWriter
-from ppo_models import Memory, ActorCritic, PPO
+
 from plotting import *
 from features import *
+
+from m_dqn_model import M_DQN_Agent
 
 from pyvirtualdisplay import Display
 
 disp = Display().start()
 
+np.random.seed(42)
 torch.manual_seed(42)
 env_name = "Cabworld-v6"
 env = gym.make(env_name)
 
-n_state = 20
-n_actions = 6
-episodes = 300
-max_timesteps = 10000
+action_size = 6
+state_size = 20
+n_episodes = 5
 
-memory = Memory()
-ppo = PPO(n_state, n_actions)
+layer_size = 64
+buffer_size = 100000
+batch_size = 8
+eps_decay = 0.99
+eps = 1
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+mdqn = M_DQN_Agent(
+    state_size=state_size,
+    action_size=action_size,
+    layer_size=layer_size,
+    BATCH_SIZE=batch_size,
+    BUFFER_SIZE=buffer_size,
+    LR=0.001,
+    TAU=0.01,
+    GAMMA=0.99,
+    UPDATE_EVERY=1,
+    device=device,
+    seed=42,
+)
 
 dirname = os.path.dirname(__file__)
-log_path = os.path.join(dirname, "../runs", "ppo")
+log_path = os.path.join(dirname, "../runs", "mdqn")
 if not os.path.exists(log_path):
     os.mkdir(log_path)
 log_folders = os.listdir(log_path)
@@ -40,22 +65,24 @@ log_path = os.path.join(log_path, str(folder_number))
 os.mkdir(log_path)
 with open(os.path.join(log_path, "info.txt"), "w+") as info_file:
     info_file.write(env_name + "\n")
-    info_file.write("Episodes:" + str(episodes) + "\n")
+    info_file.write("Episodes:" + str(n_episodes) + "\n")
+
 
 illegal_pick_ups = []
 illegal_moves = []
 do_nothing = []
-entropys = []
+epsilons = []
 n_passengers = []
 rewards = []
 mean_pick_up_path = []
 mean_drop_off_path = []
 
-for episode in range(episodes):
+for episode in range(1, n_episodes + 1):
 
     state = env.reset()
     # state = feature_engineering(state)
-    # state = tuple((list(state))[:n_state])
+    # state = tuple((list(state))[:state_size])
+    running_reward = 0
     saved_rewards = [0, 0, 0, 0]
     episode_reward = 0
     uncertainty = None
@@ -73,14 +100,15 @@ for episode in range(episodes):
     passenger_steps = 0
     no_passenger_steps = 0
 
-    for t in range(max_timesteps):
-        n_steps += 1
-        action = ppo.policy_old.act(state, memory)
-
-        state, reward, done, _ = env.step(action)
-        # state = tuple((list(state))[:n_state])
-        # state = feature_engineering(state)
+    while True:
+        action = mdqn.act(state, eps)
+        next_state, reward, done, _ = env.step(action)
+        # next_state = feature_engineering(next_state)
+        # next_state = tuple((list(next_state))[:state_size])
         saved_rewards = track_reward(reward, saved_rewards)
+
+        if action == 5:
+            saved_rewards[3] += 1
 
         if passenger:
             passenger_steps += 1
@@ -111,32 +139,31 @@ for episode in range(episodes):
             pick_ups += 1
             reward = 1000
 
-        episode_reward += reward
-        memory.rewards.append(reward)
-        memory.is_terminal.append(done)
+        mdqn.step(state, action, reward, next_state, done)
+        state = next_state
+        running_reward += reward
 
         if done:
-            mean_entropy = ppo.update(memory, episode)
-            mean_entropy = round(mean_entropy, 3)
-            memory.clear()
             print(
-                f"Episode: {episode} Reward: {episode_reward} Passengers {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Entropy {mean_entropy} Illegal-Pick-Ups {wrong_pick_up_or_drop_off}"
+                f"Episode: {episode} Reward: {running_reward} Passengers {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Epsilon {eps} Illegal-Pick-Ups {wrong_pick_up_or_drop_off}"
             )
             break
 
-    rewards.append(episode_reward)
+    eps = round(max(eps * (eps_decay ** episode), 0.01), 3)
+
+    rewards.append(running_reward)
     illegal_pick_ups.append(saved_rewards[1])
     illegal_moves.append(saved_rewards[2])
     do_nothing.append(saved_rewards[3])
-    entropys.append(mean_entropy)
+    epsilons.append(eps)
     n_passengers.append(pick_ups // 2)
     mean_pick_up_path.append((np.array(drop_off_pick_up_steps).mean()))
     mean_drop_off_path.append((np.array(pick_up_drop_off_steps).mean()))
 
-ppo.save_model(log_path)
+mdqn.save_model(log_path)
 
 plot_rewards(rewards, log_path)
-plot_rewards_and_entropy(rewards, entropys, log_path)
+plot_rewards_and_epsilon(rewards, epsilons, log_path)
 plot_rewards_and_passengers(rewards, n_passengers, log_path)
 plot_rewards_and_illegal_actions(
     rewards, illegal_pick_ups, illegal_moves, do_nothing, log_path

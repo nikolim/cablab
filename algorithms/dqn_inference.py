@@ -18,7 +18,7 @@ episodes = 5
 max_timesteps = 10000
 dqn = DQN(n_state, n_actions)
 
-dqn.load_model('../runs/dqn/44/dqn.pth')
+dqn.load_model("../runs/dqn/44/dqn.pth")
 
 for episode in range(episodes):
 
@@ -35,9 +35,8 @@ for episode in range(episodes):
         episode_reward += reward
 
         env.render()
-        #time.sleep(0.05)
+        # time.sleep(0.05)
 
         if done:
             print(f"Reward {episode_reward}")
             break
-    

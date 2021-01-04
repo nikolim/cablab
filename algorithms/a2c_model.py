@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class ActorCriticModel(nn.Module):
     def __init__(self, n_state, n_actions):
         super(ActorCriticModel, self).__init__()
-        
+
         self.fc1 = nn.Linear(n_state, 32)
 
         self.action1 = nn.Linear(32, 32)
@@ -27,6 +27,7 @@ class ActorCriticModel(nn.Module):
         state_values = self.value2(value_x)
 
         return action_probs, state_values
+
 
 class PolicyNetwork:
     def __init__(self, n_state, n_actions):
@@ -52,9 +53,9 @@ class PolicyNetwork:
         action = torch.multinomial(action_probs, 1).item()
         log_prob = torch.log(action_probs[action])
         return action, log_prob, state_value
-    
+
     def save_model(self, path):
-        full_path = os.path.join(path, 'a2c.pth')
+        full_path = os.path.join(path, "a2c.pth")
         torch.save(self.model.state_dict(), full_path)
         print(f"Model saved {full_path}")
 
@@ -62,4 +63,3 @@ class PolicyNetwork:
         self.model.load_state_dict(torch.load(path, map_location=self.device))
         self.model.eval()
         print(f"Model loaded {path}")
-

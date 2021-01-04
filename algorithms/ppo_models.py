@@ -138,7 +138,7 @@ class PPO:
         return mean_entropy
 
     def save_model(self, path):
-        full_path = os.path.join(path, 'ppo.pth')
+        full_path = os.path.join(path, "ppo.pth")
         torch.save(self.policy.state_dict(), full_path)
         print(f"Model saved {full_path}")
 
