@@ -44,13 +44,11 @@ class DQN:
     def replay(self, memory, replay_size, gamma):
         if len(memory) >= replay_size:
             replay_data = random.sample(memory, replay_size)
-
             states = []
             td_targets = []
             for state, action, next_state, reward, is_done in replay_data:
                 states.append(state)
                 q_values = self.predict(state).tolist()
-
                 if is_done:
                     q_values[action] = reward
                 else:

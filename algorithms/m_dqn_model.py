@@ -214,6 +214,7 @@ class M_DQN_Agent:
 
         # calculate munchausen addon with logsum trick
         q_k_targets = self.qnetwork_target(states).detach()
+
         v_k_target = q_k_targets.max(1)[0].unsqueeze(-1)
         logsum = torch.logsumexp((q_k_targets - v_k_target) / entropy_tau, 1).unsqueeze(
             -1
@@ -225,6 +226,12 @@ class M_DQN_Agent:
         munchausen_reward = rewards + alpha * torch.clamp(
             munchausen_addon, min=-1, max=0
         )
+
+        # Disable Munchhausen Add-on
+        # Q_target = (
+        # self.GAMMA
+        # * (pi_target * (Q_targets_next) * (1 - dones)).sum(1)).unsqueeze(-1)
+        # munchausen_reward = rewards
 
         # Compute Q targets for current states
         Q_targets = munchausen_reward + Q_target

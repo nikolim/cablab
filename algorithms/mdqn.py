@@ -26,12 +26,12 @@ env = gym.make(env_name)
 
 action_size = 6
 state_size = 20
-n_episodes = 5
+n_episodes = 100
 
 layer_size = 64
-buffer_size = 100000
-batch_size = 8
-eps_decay = 0.99
+buffer_size = 500000
+batch_size = 25
+eps_decay = 0.95
 eps = 1
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -45,7 +45,7 @@ mdqn = M_DQN_Agent(
     LR=0.001,
     TAU=0.01,
     GAMMA=0.99,
-    UPDATE_EVERY=1,
+    UPDATE_EVERY=5,
     device=device,
     seed=42,
 )
@@ -107,9 +107,6 @@ for episode in range(1, n_episodes + 1):
         # next_state = tuple((list(next_state))[:state_size])
         saved_rewards = track_reward(reward, saved_rewards)
 
-        if action == 5:
-            saved_rewards[3] += 1
-
         if passenger:
             passenger_steps += 1
         else:
@@ -149,7 +146,7 @@ for episode in range(1, n_episodes + 1):
             )
             break
 
-    eps = round(max(eps * (eps_decay ** episode), 0.01), 3)
+    eps = round(max(eps * eps_decay, 0.001), 3)
 
     rewards.append(running_reward)
     illegal_pick_ups.append(saved_rewards[1])

@@ -5,7 +5,7 @@ import random
 import time
 import torch
 from collections import deque
-from tensorboard_tracker import track_reward
+from features import track_reward
 
 from a2c_model import PolicyNetwork
 
@@ -79,12 +79,11 @@ def actor_critic(env, estimator, n_episode, gamma):
             state = next_state
 
 
-env_name = "CartPole-v0"
+env_name = "Cabworld-v4"
 env = gym.make(env_name)
-n_action = 2
-n_state = 4
-n_episode = 10000
-n_feature = 4
+n_action = 6
+n_state = 20
+n_episode = 100
 lr = 0.001
 
 dirname = os.path.dirname(__file__)

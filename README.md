@@ -9,3 +9,5 @@ https://gitlab.com/nlimbrun/cabworld
 2. A2C
 3. PPO
 4. MA-PPO
+5. MDQN
+
