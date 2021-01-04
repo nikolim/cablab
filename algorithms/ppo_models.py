@@ -8,7 +8,6 @@ from collections import deque
 
 torch.manual_seed(0)
 
-
 class Memory:
     def __init__(self):
         self.actions = deque()
@@ -30,20 +29,20 @@ class ActorCritic(nn.Module):
         super(ActorCritic, self).__init__()
 
         self.actor = nn.Sequential(
-            nn.Linear(n_state, 32),
+            nn.Linear(n_state, 128),
             nn.Tanh(),
-            nn.Linear(32, 32),
+            nn.Linear(128, 64),
             nn.Tanh(),
-            nn.Linear(32, n_actions),
+            nn.Linear(64, n_actions),
             nn.Softmax(dim=-1),
         )
 
         self.critic = nn.Sequential(
-            nn.Linear(n_state, 32),
+            nn.Linear(n_state, 128),
             nn.Tanh(),
-            nn.Linear(32, 32),
+            nn.Linear(128, 64),
             nn.Tanh(),
-            nn.Linear(32, 1),
+            nn.Linear(64, 1),
         )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

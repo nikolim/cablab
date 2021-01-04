@@ -14,9 +14,13 @@ env = gym.make("Cabworld-v6")
 
 episodes = 5
 max_timesteps = 10000
-ppo = PPO()
 
-ppo.load_model('../runs/ppo/24/ppo.pth')
+n_states = 64
+n_actions = 4
+
+ppo = PPO(n_states, n_actions)
+
+ppo.load_model('../runs/ppo/31/ppo.pth')
 
 for episode in range(episodes):
 

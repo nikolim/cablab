@@ -17,9 +17,9 @@ torch.manual_seed(42)
 env_name = "Cabworld-v6"
 env = gym.make(env_name)
 
-n_state = 12 
+n_state = 64 
 n_actions = 6
-episodes = 300
+episodes = 500
 max_timesteps = 10000
 
 memory = Memory()
@@ -55,7 +55,7 @@ for episode in range(episodes):
 
     state = env.reset()
     #state = feature_engineering(state)
-    state = tuple((list(state))[:n_state])
+    #state = tuple((list(state))[:n_state])
     saved_rewards = [0, 0, 0, 0]
     episode_reward = 0
     uncertainty = None
@@ -78,7 +78,7 @@ for episode in range(episodes):
         action = ppo.policy_old.act(state, memory)
 
         state, reward, done, _ = env.step(action)
-        state = tuple((list(state))[:n_state])
+        #state = tuple((list(state))[:n_state])
         #state = feature_engineering(state)
         saved_rewards = track_reward(reward, saved_rewards)
 
@@ -94,8 +94,8 @@ for episode in range(episodes):
         if action == 6: 
             saved_rewards[3] += 1
 
-        if reward == -10: 
-            wrong_pick_up_or_drop_off += 1
+        #if reward == -10: 
+        #    wrong_pick_up_or_drop_off += 1
 
         if reward == 100: 
             if passenger: 
@@ -109,8 +109,9 @@ for episode in range(episodes):
 
             passenger = not passenger
             pick_ups += 1
-            reward = 1000
-
+            #reward = 1000
+        
+        reward = 0 if reward < 0 else reward
         episode_reward += reward
         memory.rewards.append(reward)
         memory.is_terminal.append(done)

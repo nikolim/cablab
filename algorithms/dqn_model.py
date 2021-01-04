@@ -13,11 +13,11 @@ class DQN():
     def __init__(self, n_state, n_action, n_hidden=32, lr=0.01):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
-                        torch.nn.Linear(n_state, n_hidden),
+                        torch.nn.Linear(n_state, 64),
                         torch.nn.ReLU(),
-                        torch.nn.Linear(n_hidden, n_hidden),
+                        torch.nn.Linear(64, 64),
                         torch.nn.ReLU(),
-                        torch.nn.Linear(n_hidden, n_action),
+                        torch.nn.Linear(64, n_action),
                 )
         self.model_target = copy.deepcopy(self.model)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
