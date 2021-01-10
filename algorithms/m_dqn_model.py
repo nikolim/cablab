@@ -228,10 +228,8 @@ class M_DQN_Agent:
         )
 
         # Disable Munchhausen Add-on
-        # Q_target = (
-        # self.GAMMA
-        # * (pi_target * (Q_targets_next) * (1 - dones)).sum(1)).unsqueeze(-1)
-        # munchausen_reward = rewards
+        Q_target = (self.GAMMA * (pi_target * (Q_targets_next) * (1 - dones)).sum(1)).unsqueeze(-1)
+        munchausen_reward = rewards
 
         # Compute Q targets for current states
         Q_targets = munchausen_reward + Q_target

@@ -20,7 +20,7 @@ disp = Display().start()
 
 import gym_cabworld
 
-env_name = "Cabworld-v6"
+env_name = "CartPole-v1"
 env = gym.envs.make(env_name)
 
 
@@ -32,7 +32,7 @@ def q_learning(
     target_update=5,
     gamma=0.99,
     epsilon=1,
-    epsilon_decay=0.975,
+    epsilon_decay=0.99,
 ):
     for episode in range(n_episode):
 
@@ -126,12 +126,12 @@ def q_learning(
 
 
 counter = 0
-n_state = 12
-n_action = 6
+n_state = 4
+n_action = 2
 n_hidden = 32
 lr = 0.01
 
-n_episode = 100
+n_episode = 500
 replay_size = 25
 target_update = 5
 
@@ -145,7 +145,7 @@ mean_pick_up_path = []
 mean_drop_off_path = []
 
 dqn = DQN(n_state, n_action, n_hidden, lr)
-memory = deque(maxlen=500000)
+memory = deque(maxlen=50000)
 
 dirname = os.path.dirname(__file__)
 log_path = os.path.join(dirname, "../runs", "dqn")

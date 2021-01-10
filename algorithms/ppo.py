@@ -14,13 +14,13 @@ from pyvirtualdisplay import Display
 disp = Display().start()
 
 torch.manual_seed(42)
-env_name = "Cabworld-v6"
+env_name = "MountainCar-v0"
 env = gym.make(env_name)
 
-n_state = 12
-n_actions = 4
-episodes = 100
-max_timesteps = 10000
+n_state = 2
+n_actions = 3
+episodes = 3000
+max_timesteps = 200
 
 memory = Memory()
 ppo = PPO(n_state, n_actions)
@@ -55,7 +55,7 @@ for episode in range(episodes):
 
     state = env.reset()
     # state = feature_engineering(state)
-    state = tuple((list(state))[:n_state])
+    # state = tuple((list(state))[:n_state])
     saved_rewards = [0, 0, 0, 0]
     episode_reward = 0
     uncertainty = None
@@ -78,7 +78,7 @@ for episode in range(episodes):
         action = ppo.policy_old.act(state, memory)
 
         state, reward, done, _ = env.step(action)
-        state = tuple((list(state))[:n_state])
+        # state = tuple((list(state))[:n_state])
         # state = feature_engineering(state)
         saved_rewards = track_reward(reward, saved_rewards)
 

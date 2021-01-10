@@ -21,17 +21,17 @@ disp = Display().start()
 
 np.random.seed(42)
 torch.manual_seed(42)
-env_name = "Cabworld-v6"
+env_name = "MountainCar-v0"
 env = gym.make(env_name)
 
-action_size = 6
-state_size = 20
-n_episodes = 100
+action_size = 3
+state_size = 2
+n_episodes = 500
 
 layer_size = 64
-buffer_size = 500000
-batch_size = 25
-eps_decay = 0.95
+buffer_size = 50000
+batch_size = 10
+eps_decay = 0.99
 eps = 1
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -45,7 +45,7 @@ mdqn = M_DQN_Agent(
     LR=0.001,
     TAU=0.01,
     GAMMA=0.99,
-    UPDATE_EVERY=5,
+    UPDATE_EVERY=1,
     device=device,
     seed=42,
 )
