@@ -20,9 +20,8 @@ disp = Display().start()
 
 import gym_cabworld
 
-env_name = "CartPole-v1"
+env_name = "Cabworld-v6"
 env = gym.envs.make(env_name)
-
 
 def q_learning(
     env,
@@ -32,7 +31,7 @@ def q_learning(
     target_update=5,
     gamma=0.99,
     epsilon=1,
-    epsilon_decay=0.99,
+    epsilon_decay=0.95,
 ):
     for episode in range(n_episode):
 
@@ -102,7 +101,7 @@ def q_learning(
 
             memory.append((state, action, next_state, reward, is_done))
 
-            if steps % 5 == 0:
+            if steps % 10 == 0:
                 estimator.replay(memory, replay_size, gamma)
 
             if is_done:
@@ -126,13 +125,13 @@ def q_learning(
 
 
 counter = 0
-n_state = 4
-n_action = 2
+n_state = 6
+n_action = 6
 n_hidden = 32
 lr = 0.01
 
-n_episode = 500
-replay_size = 25
+n_episode = 50
+replay_size = 20
 target_update = 5
 
 illegal_pick_ups = []

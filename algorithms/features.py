@@ -54,3 +54,9 @@ def track_reward(reward, saved_rewards):
     if reward == -5:
         saved_rewards[2] += 1
     return saved_rewards
+
+def clip_state(state, n):
+    clipped_state = (list(state))[:n]
+    missing_pos = [0] * (len(state)-n)
+    clipped_state += missing_pos
+    return tuple(clipped_state)
