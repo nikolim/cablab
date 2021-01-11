@@ -141,7 +141,7 @@ class M_DQN_Agent:
 
         self.action_step = 4
         self.last_action = None
-
+        
         # Q-Network
         self.qnetwork_local = DDQN(state_size, action_size, layer_size, seed).to(device)
         self.qnetwork_target = DDQN(state_size, action_size, layer_size, seed).to(
@@ -228,8 +228,8 @@ class M_DQN_Agent:
         )
 
         # Disable Munchhausen Add-on
-        Q_target = (self.GAMMA * (pi_target * (Q_targets_next) * (1 - dones)).sum(1)).unsqueeze(-1)
-        munchausen_reward = rewards
+        # Q_target = (self.GAMMA * (pi_target * (Q_targets_next) * (1 - dones)).sum(1)).unsqueeze(-1)
+        # munchausen_reward = rewards
 
         # Compute Q targets for current states
         Q_targets = munchausen_reward + Q_target

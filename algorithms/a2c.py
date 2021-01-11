@@ -4,8 +4,9 @@ import gym_cabworld
 import random
 import time
 import torch
+import numpy as np
 from collections import deque
-from features import track_reward
+from features import track_reward, clip_state
 
 from a2c_model import PolicyNetwork
 
@@ -13,25 +14,44 @@ from pyvirtualdisplay import Display
 
 disp = Display().start()
 
-
 def actor_critic(env, estimator, n_episode, gamma):
 
     for episode in range(n_episode):
+
+        n_clip = 6
+
+        if episode >= 50:
+            n_clip = 6
+
         log_probs = []
         running_reward = 0
         state_values = []
         state = env.reset()
-        state = tuple((list(state))[:n_state])
+        # state = tuple((list(state))[:n_state])
+        state = clip_state(state, n_clip)
 
         saved_rewards = [0, 0, 0, 0]
         pick_ups = 0
         number_of_action_4 = 0
         number_of_action_5 = 0
+        wrong_pick_up_or_drop_off = 0
+
+        passenger = False
+        pick_up_drop_off_steps = []
+        drop_off_pick_up_steps = []
+        passenger_steps = 0
+        no_passenger_steps = 0
 
         while True:
             action, log_prob, state_value = estimator.get_action(state)
             next_state, reward, is_done, _ = env.step(action)
-            next_state = tuple((list(next_state))[:n_state])
+            # next_state = tuple((list(next_state))[:n_state])
+            next_state = clip_state(next_state, n_clip)
+
+            if passenger:
+                passenger_steps += 1
+            else:
+                no_passenger_steps += 1
 
             if action == 4:
                 number_of_action_4 += 1
@@ -40,20 +60,33 @@ def actor_critic(env, estimator, n_episode, gamma):
             if action == 6:
                 saved_rewards[3] += 1
 
-            running_reward += reward
             log_probs.append(log_prob)
             state_values.append(state_value)
             rewards.append(reward)
 
             saved_rewards = track_reward(reward, saved_rewards)
 
+            if reward == -10:
+                wrong_pick_up_or_drop_off += 1
+
             if reward == 100:
+                if passenger:
+                    # drop-off
+                    drop_off_pick_up_steps.append(no_passenger_steps)
+                    no_passenger_steps = 0
+                else:
+                    # pick-up
+                    pick_up_drop_off_steps.append(passenger_steps)
+                    passenger_steps = 0
+                passenger = not passenger
                 pick_ups += 1
                 reward = 1000
+            
+            running_reward += reward
 
             if is_done:
                 print(
-                    f"Episode: {episode} Reward: {running_reward} Passengers {pick_ups//2}"
+                f"Episode: {episode} Reward: {running_reward} Passengers {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Illegal-Pick-Ups {wrong_pick_up_or_drop_off}"
                 )
                 returns = []
                 Gt = 0
@@ -74,12 +107,14 @@ def actor_critic(env, estimator, n_episode, gamma):
                 do_nothing.append(saved_rewards[3])
                 uncertainties.append(uncertainty)
                 n_passengers.append(pick_ups // 2)
+                mean_pick_up_path.append((np.array(drop_off_pick_up_steps).mean()))
+                mean_drop_off_path.append((np.array(pick_up_drop_off_steps).mean()))
                 break
 
             state = next_state
 
 
-env_name = "Cabworld-v4"
+env_name = "Cabworld-v6"
 env = gym.make(env_name)
 n_action = 6
 n_state = 20
@@ -108,6 +143,8 @@ do_nothing = []
 uncertainties = []
 n_passengers = []
 rewards = []
+mean_pick_up_path = []
+mean_drop_off_path = []
 
 estimator = PolicyNetwork(n_state, n_action)
 actor_critic(env, estimator, n_episode, 0.99)
@@ -121,3 +158,4 @@ plot_rewards_and_passengers(rewards, n_passengers, log_path)
 plot_rewards_and_illegal_actions(
     rewards, illegal_pick_ups, illegal_moves, do_nothing, log_path
 )
+plot_mean_pick_up_drop_offs(mean_pick_up_path, mean_drop_off_path, log_path)

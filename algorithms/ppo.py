@@ -19,7 +19,7 @@ env = gym.make(env_name)
 
 n_state = 20
 n_actions = 6
-episodes = 100
+episodes = 200
 max_timesteps = 10000
 
 memory = Memory()
@@ -51,10 +51,11 @@ mean_pick_up_path = []
 mean_drop_off_path = []
 
 n_clip = 6
+total_number_passengers = 0
 
 for episode in range(episodes):
 
-    if episode >= 50:
+    if episode >= 75:
         n_clip = 10
 
     state = env.reset()
@@ -130,6 +131,8 @@ for episode in range(episodes):
             print(
                 f"Episode: {episode} Reward: {episode_reward} Passengers {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Entropy {mean_entropy} Illegal-Pick-Ups {wrong_pick_up_or_drop_off}"
             )
+            if episode >= 150:
+                total_number_passengers += (pick_ups//2)
             break
 
     rewards.append(episode_reward)
@@ -142,6 +145,9 @@ for episode in range(episodes):
     mean_drop_off_path.append((np.array(pick_up_drop_off_steps).mean()))
 
 ppo.save_model(log_path)
+
+mean_n_passengers = total_number_passengers / 50
+print(f'Mean number of passengers: {mean_n_passengers}  ({episodes} Episodes)')
 
 plot_rewards(rewards, log_path)
 plot_rewards_and_entropy(rewards, entropys, log_path)

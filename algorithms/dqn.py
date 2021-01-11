@@ -101,7 +101,7 @@ def q_learning(
 
             memory.append((state, action, next_state, reward, is_done))
 
-            if steps % 10 == 0:
+            if steps % 100 == 0:
                 estimator.replay(memory, replay_size, gamma)
 
             if is_done:
@@ -125,13 +125,13 @@ def q_learning(
 
 
 counter = 0
-n_state = 6
-n_action = 6
-n_hidden = 32
+n_state = 4
+n_action = 4
+n_hidden = 8
 lr = 0.01
 
-n_episode = 50
-replay_size = 20
+n_episode = 100
+replay_size = 100
 target_update = 5
 
 illegal_pick_ups = []

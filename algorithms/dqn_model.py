@@ -55,7 +55,7 @@ class DQN:
                     q_values_next = self.target_predict(next_state).detach()
                     q_values[action] = reward + gamma * torch.max(q_values_next).item()
                 td_targets.append(q_values)
-                # self.update(state, q_values)
+                #self.update(state, q_values)
             self.update(states, td_targets)
 
     def copy_target(self):

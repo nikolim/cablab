@@ -21,17 +21,17 @@ disp = Display().start()
 
 np.random.seed(42)
 torch.manual_seed(42)
-env_name = "MountainCar-v0"
+env_name = "Cabworld-v6"
 env = gym.make(env_name)
 
-action_size = 3
-state_size = 2
-n_episodes = 500
+action_size = 6
+state_size = 20
+n_episodes = 100
 
 layer_size = 64
 buffer_size = 50000
-batch_size = 10
-eps_decay = 0.99
+batch_size = 64
+eps_decay = 0.95
 eps = 1
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -45,7 +45,7 @@ mdqn = M_DQN_Agent(
     LR=0.001,
     TAU=0.01,
     GAMMA=0.99,
-    UPDATE_EVERY=1,
+    UPDATE_EVERY=10,
     device=device,
     seed=42,
 )
@@ -77,9 +77,16 @@ rewards = []
 mean_pick_up_path = []
 mean_drop_off_path = []
 
+n_clip = 6
+
 for episode in range(1, n_episodes + 1):
 
+    if episode >= 50:
+        n_clip = 6
+
     state = env.reset()
+    state = clip_state(state, n_clip)
+
     # state = feature_engineering(state)
     # state = tuple((list(state))[:state_size])
     running_reward = 0
@@ -103,6 +110,9 @@ for episode in range(1, n_episodes + 1):
     while True:
         action = mdqn.act(state, eps)
         next_state, reward, done, _ = env.step(action)
+
+        next_state = clip_state(next_state, n_clip)
+
         # next_state = feature_engineering(next_state)
         # next_state = tuple((list(next_state))[:state_size])
         saved_rewards = track_reward(reward, saved_rewards)

@@ -20,7 +20,7 @@ env = gym.make(env_name)
 
 n_state = 20
 n_actions = 6
-episodes = 10
+episodes = 100
 max_timesteps = 10000
 
 dirname = os.path.dirname(__file__)
@@ -49,6 +49,8 @@ mean_pick_up_path = []
 mean_drop_off_path = []
 
 n_clip = 6
+
+total_n_passengers = 0
 
 def random_policy(state): 
     state = list(state)
@@ -124,6 +126,7 @@ for episode in range(episodes):
             print(
                 f"Episode: {episode} Reward: {episode_reward} Passengers {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Entropy {mean_entropy} Illegal-Pick-Ups {wrong_pick_up_or_drop_off}"
             )
+            total_n_passengers += (pick_ups//2)
             break
 
     rewards.append(episode_reward)
@@ -134,6 +137,9 @@ for episode in range(episodes):
     n_passengers.append(pick_ups // 2)
     mean_pick_up_path.append((np.array(drop_off_pick_up_steps).mean()))
     mean_drop_off_path.append((np.array(pick_up_drop_off_steps).mean()))
+
+mean_n_passengers = total_n_passengers / episodes
+print(f'Mean number of passengers: {mean_n_passengers}  ({episodes} Episodes)')
 
 plot_rewards(rewards, log_path)
 plot_rewards_and_entropy(rewards, entropys, log_path)
