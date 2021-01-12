@@ -14,9 +14,9 @@ env = gym.make("Cabworld-v6")
 
 episodes = 5
 max_timesteps = 10000
-ppo = PPO()
+ppo = PPO(n_state=20, n_actions=6)
 
-ppo.load_model("../runs/ppo/24/ppo.pth")
+ppo.load_model("../runs/ppo/50/ppo.pth")
 
 for episode in range(episodes):
 
@@ -31,7 +31,7 @@ for episode in range(episodes):
         episode_reward += reward
 
         env.render()
-        # time.sleep(0.05)
+        time.sleep(0.1)
 
         if done:
             print(f"Reward {episode_reward}")

@@ -14,10 +14,10 @@ from pyvirtualdisplay import Display
 disp = Display().start()
 
 torch.manual_seed(42)
-env_name = "Cabworld-v6"
+env_name = "Cabworld-v0"
 env = gym.make(env_name)
 
-n_state = 20
+n_state = 14
 n_actions = 6
 episodes = 200
 max_timesteps = 10000
@@ -55,7 +55,7 @@ total_number_passengers = 0
 
 for episode in range(episodes):
 
-    if episode >= 75:
+    if episode >= 100:
         n_clip = 10
 
     state = env.reset()
@@ -86,7 +86,7 @@ for episode in range(episodes):
         state, reward, done, _ = env.step(action)
         state = clip_state(state, n_clip)
 
-        # state = tuple((list(state))[:n_state])
+        state = tuple((list(state))[:n_state])
         # state = feature_engineering(state)
 
         saved_rewards = track_reward(reward, saved_rewards)
