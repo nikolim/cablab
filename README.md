@@ -12,11 +12,10 @@
 	</a>
 </div>
 
-
 # Cablab
 
 Development, improvement and testing of various reinforcement learning algorithms. <br>
-Focus is on finding an effective algorithm for the cabworld. The algorithms can also be applied to all other OpenAiGym environments.
+Focus is on finding an effective algorithm for the cabworld. The algorithms can also be applied to all other OpenAIGym environments.
 
 ## Cabworld
 

@@ -5,9 +5,9 @@ import gym
 import math
 import gym_cabworld
 from torch.utils.tensorboard import SummaryWriter
-from ppo_models import Memory, ActorCritic, PPO
-from plotting import *
-from features import *
+from algorithms.ppo_models import Memory, ActorCritic, PPO
+from algorithms.plotting import *
+from algorithms.features import *
 
 from pyvirtualdisplay import Display
 
@@ -19,8 +19,8 @@ env = gym.make(env_name)
 
 n_state = 14
 n_actions = 6
-episodes = 200
-max_timesteps = 10000
+episodes = 1
+max_timesteps = 1000
 
 memory = Memory()
 ppo = PPO(n_state, n_actions)
@@ -56,7 +56,7 @@ total_number_passengers = 0
 for episode in range(episodes):
 
     if episode >= 100:
-        n_clip = 10
+        n_clip = 6
 
     state = env.reset()
     state = clip_state(state, n_clip)
@@ -118,7 +118,7 @@ for episode in range(episodes):
 
             passenger = not passenger
             pick_ups += 1
-            reward = 1000
+            # reward = 1000
 
         episode_reward += reward
         memory.rewards.append(reward)
