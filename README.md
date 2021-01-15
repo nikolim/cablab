@@ -56,8 +56,8 @@ The cabworld is a relativly complex environment with different subtasks which ca
 ## Usage 
 
 ```bash
-python3 dqn.py 
-python3 ppo.py 
+python3 train.py -a ppo -n 1
+python3 deploy.py -a ppo -n 1
 ...
 ```
 

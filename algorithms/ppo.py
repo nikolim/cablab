@@ -1,158 +1,89 @@
 import os
+import math
+import time
 import torch
 import numpy as np
-import gym
-import math
-import gym_cabworld
-from torch.utils.tensorboard import SummaryWriter
-from algorithms.ppo_models import Memory, ActorCritic, PPO
-from algorithms.plotting import *
-from algorithms.features import *
-
 from pyvirtualdisplay import Display
 
-disp = Display().start()
+import gym
+import gym_cabworld
 
-torch.manual_seed(42)
-env_name = "Cabworld-v0"
-env = gym.make(env_name)
+from algorithms.ppo_models import Memory, PPO
 
-n_state = 14
-n_actions = 6
-episodes = 1
-max_timesteps = 1000
+from common.features import clip_state, cut_off_state
+from common.logging import create_log_folder, get_last_folder
+from common.logging import Tracker
 
-memory = Memory()
-ppo = PPO(n_state, n_actions)
 
-dirname = os.path.dirname(__file__)
-log_path = os.path.join(dirname, "../runs", "ppo")
-if not os.path.exists(log_path):
-    os.mkdir(log_path)
-log_folders = os.listdir(log_path)
-if len(log_folders) == 0:
-    folder_number = 0
-else:
-    folder_number = max([int(elem) for elem in log_folders]) + 1
+def train_ppo(n_episodes):
 
-log_path = os.path.join(log_path, str(folder_number))
-os.mkdir(log_path)
-with open(os.path.join(log_path, "info.txt"), "w+") as info_file:
-    info_file.write(env_name + "\n")
-    info_file.write("Episodes:" + str(episodes) + "\n")
+    disp = Display().start()
+    env_name = "Cabworld-v0"
+    env = gym.make(env_name)
 
-illegal_pick_ups = []
-illegal_moves = []
-do_nothing = []
-entropys = []
-n_passengers = []
-rewards = []
-mean_pick_up_path = []
-mean_drop_off_path = []
+    n_states = 14
+    n_actions = 6
+    max_timesteps = 1000
 
-n_clip = 6
-total_number_passengers = 0
+    log_path = create_log_folder('ppo')
+    tracker = Tracker()
 
-for episode in range(episodes):
+    memory = Memory()
+    ppo = PPO(n_states, n_actions)
 
-    if episode >= 100:
-        n_clip = 6
+    for episode in range(n_episodes):
 
-    state = env.reset()
-    state = clip_state(state, n_clip)
+        tracker.new_episode()
+        state = env.reset()
+        # state = clip_state(state, n_clip)
+        # state = cut_off_state(state, n_state)
 
-    # state = feature_engineering(state)
-    # state = tuple((list(state))[:n_state])
+        for _ in range(max_timesteps):
 
-    saved_rewards = [0, 0, 0, 0]
-    episode_reward = 0
-    uncertainty = None
-    pick_ups = 0
-    mean_entropy = 0
+            action = ppo.policy_old.act(state, memory)
+            state, reward, done, _ = env.step(action)
+            # state = clip_state(state, n_clip)
+            # state = cut_off_state(state, n_state)
 
-    number_of_action_4 = 0
-    number_of_action_5 = 0
-    wrong_pick_up_or_drop_off = 0
+            tracker.track_reward(reward)
 
-    passenger = False
-    pick_up_drop_off_steps = []
-    drop_off_pick_up_steps = []
-    passenger_steps = 0
-    no_passenger_steps = 0
+            memory.rewards.append(reward)
+            memory.is_terminal.append(done)
 
-    for t in range(max_timesteps):
-        action = ppo.policy_old.act(state, memory)
+            if done:
+                mean_entropy = ppo.update(memory, episode)
+                memory.clear()
+                print(f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}")
+                break
 
-        state, reward, done, _ = env.step(action)
-        state = clip_state(state, n_clip)
+    ppo.save_model(log_path)
+    tracker.plot(log_path)
 
-        state = tuple((list(state))[:n_state])
-        # state = feature_engineering(state)
 
-        saved_rewards = track_reward(reward, saved_rewards)
+def deploy_ppo(n_episodes):
 
-        if passenger:
-            passenger_steps += 1
-        else:
-            no_passenger_steps += 1
+    env_name = "Cabworld-v0"
+    env = gym.make(env_name)
+    
+    ppo = PPO(n_state=14, n_actions=6)
 
-        if action == 4:
-            number_of_action_4 += 1
-        if action == 5:
-            number_of_action_5 += 1
-        if action == 6:
-            saved_rewards[3] += 1
+    current_folder = get_last_folder('ppo')
+    if not current_folder:
+        print('No model')
+        return
+    current_model = os.path.join(current_folder, 'ppo.pth')    
+    ppo.load_model(current_model)
 
-        if reward == -10:
-            wrong_pick_up_or_drop_off += 1
-
-        if reward == 100:
-            if passenger:
-                # drop-off
-                drop_off_pick_up_steps.append(no_passenger_steps)
-                no_passenger_steps = 0
-            else:
-                # pick-up
-                pick_up_drop_off_steps.append(passenger_steps)
-                passenger_steps = 0
-
-            passenger = not passenger
-            pick_ups += 1
-            # reward = 1000
-
-        episode_reward += reward
-        memory.rewards.append(reward)
-        memory.is_terminal.append(done)
-
-        if done:
-            mean_entropy = ppo.update(memory, episode)
-            mean_entropy = round(mean_entropy, 3)
-            memory.clear()
-            print(
-                f"Episode: {episode} Reward: {episode_reward} Passengers {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Entropy {mean_entropy} Illegal-Pick-Ups {wrong_pick_up_or_drop_off}"
-            )
-            if episode >= 150:
-                total_number_passengers += (pick_ups//2)
-            break
-
-    rewards.append(episode_reward)
-    illegal_pick_ups.append(saved_rewards[1])
-    illegal_moves.append(saved_rewards[2])
-    do_nothing.append(saved_rewards[3])
-    entropys.append(mean_entropy)
-    n_passengers.append(pick_ups // 2)
-    mean_pick_up_path.append((np.array(drop_off_pick_up_steps).mean()))
-    mean_drop_off_path.append((np.array(pick_up_drop_off_steps).mean()))
-
-ppo.save_model(log_path)
-
-mean_n_passengers = total_number_passengers / 50
-print(f'Mean number of passengers: {mean_n_passengers}  ({episodes} Episodes)')
-
-plot_rewards(rewards, log_path)
-plot_rewards_and_entropy(rewards, entropys, log_path)
-plot_rewards_and_passengers(rewards, n_passengers, log_path)
-plot_rewards_and_illegal_actions(
-    rewards, illegal_pick_ups, illegal_moves, do_nothing, log_path
-)
-plot_mean_pick_up_drop_offs(mean_pick_up_path, mean_drop_off_path, log_path)
+    for _ in range(n_episodes):
+        state = env.reset()
+        episode_reward = 0
+        done = False
+        while not done:
+            action = ppo.policy.deploy(state)
+            state, reward, done, _ = env.step(action)
+            episode_reward += reward
+            env.render()
+            time.sleep(0.1)
+            if done:
+                print(f"Reward {episode_reward}")
+                break

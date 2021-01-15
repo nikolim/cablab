@@ -1,19 +1,22 @@
 import argparse
 
-from algorithms.ppo import run_ppo
+from algorithms.ppo import train_ppo
 
-parser = argparse.ArgumentParser(description="Training selector")
+parser = argparse.ArgumentParser(description="Train: select algorithm and number of episodes")
 parser.add_argument('-a', '--algorithm', type=str, required=True,
                     help="Algorithm to run")
-parser.add_argument('-n', '--number', type=int, required=True,
+parser.add_argument('-n', '--number', required=True,
                     help="Number of episodes to run")
-
 args = parser.parse_args()
-print(args)
+
+valid_algorithms = ['ppo', 'dqn']
 
 if args.algorithm == "ppo": 
-    run_ppo(int(args.number))
-
+    train_ppo(int(args.number))
+elif args.algorithms == 'dqn': 
+    train_dqn(args.number)
+else: 
+    print('Not a valid algorithm: {args.algorithm}')
 
 
 
