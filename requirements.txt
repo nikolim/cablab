@@ -93,7 +93,6 @@ pexpect==4.8.0
 pickleshare==0.7.5
 Pillow==8.0.1
 pip-chill==1.0.0
-pkg-resources==0.0.0
 pkginfo==1.6.1
 pluggy==0.13.1
 proglog==0.1.9
