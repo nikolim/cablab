@@ -1,4 +1,11 @@
 /runs
 /algorithms/__pycache__
+common/__pycache__
 .vscode/
 /__pycache__
+NOTES.md
+.coverage
+/hmtlcov
+/algorithms/machin*
+TODO.md
+/builds

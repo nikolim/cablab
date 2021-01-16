@@ -77,9 +77,7 @@ def plot_rewards_and_passengers(rewards, n_passenger, path):
     plt.savefig(os.path.join(path, "rewards_passengers.png"))
 
 
-def plot_rewards_and_illegal_actions(
-    rewards, illegal_drop_offs, illegal_moves, do_nothing, path
-):
+def plot_rewards_and_illegal_actions(rewards, illegal_drop_offs, illegal_moves, path):
 
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
@@ -93,7 +91,6 @@ def plot_rewards_and_illegal_actions(
     ax2.set_ylabel("Moves")
     ax2.plot(illegal_drop_offs, color=ILLEGAL_PICK_UP_COLOR, label="Illegal Drop-Offs")
     ax2.plot(illegal_moves, color=ILLEGAL_MOVE_COLOR, label="Illegal Moves")
-    ax2.plot(do_nothing, color=DO_NOTHING_COLOR, label="Do nothing")
 
     plt.legend(loc="best")
     fig.tight_layout()
