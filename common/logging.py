@@ -3,6 +3,7 @@ import numpy as np
 
 from common.plotting import *
 
+
 def create_log_folder(algorithm):
     dirname = os.path.dirname(__file__)
     log_path = os.path.join(dirname, "../runs", str(algorithm))
@@ -17,6 +18,7 @@ def create_log_folder(algorithm):
     os.mkdir(log_path)
     return log_path
 
+
 def get_last_folder(algorithm):
     dirname = os.path.dirname(__file__)
     log_path = os.path.join(dirname, "../runs", str(algorithm))
@@ -30,7 +32,8 @@ def get_last_folder(algorithm):
     current_log_path = os.path.join(log_path, str(folder_number))
     return current_log_path
 
-class Tracker(): 
+
+class Tracker:
     def __init__(self) -> None:
         # storage for all episodes
         self.illegal_pick_ups = []
@@ -64,8 +67,12 @@ class Tracker():
             self.illegal_moves.append(self.illegal_moves_ep)
             self.n_passengers.append(self.pick_ups // 2)
             if len(self.drop_off_pick_up_steps) > 0:
-                self.mean_pick_up_path.append((np.array(self.drop_off_pick_up_steps).mean()))
-                self.mean_drop_off_path.append((np.array(self.pick_up_drop_off_steps).mean()))
+                self.mean_pick_up_path.append(
+                    (np.array(self.drop_off_pick_up_steps).mean())
+                )
+                self.mean_drop_off_path.append(
+                    (np.array(self.pick_up_drop_off_steps).mean())
+                )
 
         self.init_episode_vars()
         self.eps_counter += 1
@@ -75,7 +82,7 @@ class Tracker():
             self.illegal_moves_ep += 1
         if reward == -10:
             self.illegal_pick_up_ep += 1
-        if reward == 100: 
+        if reward == 100:
             if self.passenger:
                 self.drop_off_pick_up_steps.append(self.no_passenger_steps)
                 self.no_passenger_steps = 0
@@ -85,19 +92,23 @@ class Tracker():
 
             self.passenger = not self.passenger
             self.pick_ups += 1
-        
+
         self.episode_reward += reward
 
-        if self.passenger: 
+        if self.passenger:
             self.passenger_steps += 1
-        else: 
+        else:
             self.no_passenger_steps += 1
-        
-    def get_pick_ups(self): 
+
+    def get_pick_ups(self):
         return self.pick_ups // 2
 
-    def plot(self, log_path): 
+    def plot(self, log_path):
         plot_rewards(self.rewards, log_path)
         plot_rewards_and_passengers(self.rewards, self.n_passengers, log_path)
-        plot_rewards_and_illegal_actions(self.rewards, self.illegal_pick_ups, self.illegal_moves, log_path)
-        plot_mean_pick_up_drop_offs(self.mean_pick_up_path, self.mean_drop_off_path, log_path)
+        plot_rewards_and_illegal_actions(
+            self.rewards, self.illegal_pick_ups, self.illegal_moves, log_path
+        )
+        plot_mean_pick_up_drop_offs(
+            self.mean_pick_up_path, self.mean_drop_off_path, log_path
+        )

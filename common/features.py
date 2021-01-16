@@ -1,6 +1,6 @@
 def clip_state(state, n):
     clipped_state = (list(state))[:n]
-    missing_pos = [0] * (len(state)-n)
+    missing_pos = [0] * (len(state) - n)
     clipped_state += missing_pos
     return tuple(clipped_state)
 

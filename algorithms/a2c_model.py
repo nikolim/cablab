@@ -33,7 +33,7 @@ class PolicyNetwork:
     def __init__(self, n_state, n_actions):
         self.model = ActorCriticModel(n_state, n_actions)
         self.optimizer = torch.optim.Adam(self.model.parameters(), 0.01)
-
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     def predict(self, s):
         return self.model(torch.Tensor(s))
 

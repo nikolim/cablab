@@ -1,152 +1,81 @@
-import os
-import torch
-import numpy as np
-import gym
+import time
 import random
-import math
-import gym_cabworld
-from torch.utils.tensorboard import SummaryWriter
-from ppo_models import Memory, ActorCritic, PPO
-from plotting import *
-from features import *
+import numpy as np
 
 from pyvirtualdisplay import Display
 
-disp = Display().start()
+import gym
+import gym_cabworld
 
-torch.manual_seed(42)
-env_name = "Cabworld-v6"
-env = gym.make(env_name)
+from algorithms.ppo_models import Memory, PPO
+from common.features import clip_state, cut_off_state
+from common.logging import create_log_folder, get_last_folder
+from common.logging import Tracker
 
-n_state = 20
-n_actions = 6
-episodes = 100
-max_timesteps = 10000
 
-dirname = os.path.dirname(__file__)
-log_path = os.path.join(dirname, "../runs", "rand")
-if not os.path.exists(log_path):
-    os.mkdir(log_path)
-log_folders = os.listdir(log_path)
-if len(log_folders) == 0:
-    folder_number = 0
-else:
-    folder_number = max([int(elem) for elem in log_folders]) + 1
-
-log_path = os.path.join(log_path, str(folder_number))
-os.mkdir(log_path)
-with open(os.path.join(log_path, "info.txt"), "w+") as info_file:
-    info_file.write(env_name + "\n")
-    info_file.write("Episodes:" + str(episodes) + "\n")
-
-illegal_pick_ups = []
-illegal_moves = []
-do_nothing = []
-entropys = []
-n_passengers = []
-rewards = []
-mean_pick_up_path = []
-mean_drop_off_path = []
-
-n_clip = 6
-
-total_n_passengers = 0
-
-def random_policy(state): 
+def random_policy(state):
     state = list(state)
-
-    if state[4] == 1: 
+    if state[4] == 1:
         return 4
-    if state[5] == 1: 
-        return 5 
-    else: 
+    if state[5] == 1:
+        return 5
+    else:
         move_flags = state[:4]
-        legal_moves = [i for i,flag in enumerate(move_flags) if flag==1] 
+        legal_moves = [i for i, flag in enumerate(move_flags) if flag == 1]
         return random.sample(legal_moves, 1)[0]
 
-for episode in range(episodes):
 
-    state = env.reset()
-    state = clip_state(state, n_clip)
+def train_random(n_episodes):
 
-    saved_rewards = [0, 0, 0, 0]
-    episode_reward = 0
-    uncertainty = None
-    n_steps = 0
-    pick_ups = 0
-    mean_entropy = 0
+    Display().start()
+    env_name = "Cabworld-v0"
+    env = gym.make(env_name)
 
-    number_of_action_4 = 0
-    number_of_action_5 = 0
-    wrong_pick_up_or_drop_off = 0
+    max_timesteps = 1000
 
-    passenger = False
-    pick_up_drop_off_steps = []
-    drop_off_pick_up_steps = []
-    passenger_steps = 0
-    no_passenger_steps = 0
+    log_path = create_log_folder("rand")
+    tracker = Tracker()
 
-    for t in range(max_timesteps):
-        action = random_policy(state)
+    for episode in range(n_episodes):
 
-        state, reward, done, _ = env.step(action)
-        saved_rewards = track_reward(reward, saved_rewards)
+        tracker.new_episode()
+        state = env.reset()
+        # state = clip_state(state, n_clip)
+        # state = cut_off_state(state, n_state)
 
-        if passenger:
-            passenger_steps += 1
-        else:
-            no_passenger_steps += 1
+        for _ in range(max_timesteps):
 
-        if action == 4:
-            number_of_action_4 += 1
-        if action == 5:
-            number_of_action_5 += 1
-        if action == 6:
-            saved_rewards[3] += 1
+            action = random_policy(state)
+            state, reward, done, _ = env.step(action)
+            # state = clip_state(state, n_clip)
+            # state = cut_off_state(state, n_state)
 
-        if reward == -10:
-            wrong_pick_up_or_drop_off += 1
+            tracker.track_reward(reward)
 
-        if reward == 100:
-            if passenger:
-                # drop-off
-                drop_off_pick_up_steps.append(no_passenger_steps)
-                no_passenger_steps = 0
-            else:
-                # pick-up
-                pick_up_drop_off_steps.append(passenger_steps)
-                passenger_steps = 0
+            if done:
+                print(
+                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
+                )
+                break
 
-            passenger = not passenger
-            pick_ups += 1
-            reward = 1000
-
-        episode_reward += reward
-        if done:
-            print(
-                f"Episode: {episode} Reward: {episode_reward} Passengers {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Entropy {mean_entropy} Illegal-Pick-Ups {wrong_pick_up_or_drop_off}"
-            )
-            total_n_passengers += (pick_ups//2)
-            break
-
-    rewards.append(episode_reward)
-    illegal_pick_ups.append(saved_rewards[1])
-    illegal_moves.append(saved_rewards[2])
-    do_nothing.append(saved_rewards[3])
-    entropys.append(mean_entropy)
-    n_passengers.append(pick_ups // 2)
-    mean_pick_up_path.append((np.array(drop_off_pick_up_steps).mean()))
-    mean_drop_off_path.append((np.array(pick_up_drop_off_steps).mean()))
-
-mean_n_passengers = total_n_passengers / episodes
-print(f'Mean number of passengers: {mean_n_passengers}  ({episodes} Episodes)')
-
-plot_rewards(rewards, log_path)
-plot_rewards_and_entropy(rewards, entropys, log_path)
-plot_rewards_and_passengers(rewards, n_passengers, log_path)
-plot_rewards_and_illegal_actions(
-    rewards, illegal_pick_ups, illegal_moves, do_nothing, log_path
-)
-plot_mean_pick_up_drop_offs(mean_pick_up_path, mean_drop_off_path, log_path)
+    tracker.plot(log_path)
 
 
+def deploy_random(n_episodes, wait):
+
+    env_name = "Cabworld-v0"
+    env = gym.make(env_name)
+
+    for _ in range(n_episodes):
+        state = env.reset()
+        episode_reward = 0
+        done = False
+        while not done:
+            action = random_policy(state)
+            state, reward, done, _ = env.step(action)
+            episode_reward += reward
+            env.render()
+            time.sleep(wait)
+            if done:
+                print(f"Reward {episode_reward}")
+                break

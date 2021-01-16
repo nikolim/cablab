@@ -1,7 +1,5 @@
 import os
-import math
 import time
-import torch
 import numpy as np
 from pyvirtualdisplay import Display
 
@@ -9,7 +7,6 @@ import gym
 import gym_cabworld
 
 from algorithms.ppo_models import Memory, PPO
-
 from common.features import clip_state, cut_off_state
 from common.logging import create_log_folder, get_last_folder
 from common.logging import Tracker
@@ -17,7 +14,7 @@ from common.logging import Tracker
 
 def train_ppo(n_episodes):
 
-    disp = Display().start()
+    Display().start()
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
@@ -25,7 +22,7 @@ def train_ppo(n_episodes):
     n_actions = 6
     max_timesteps = 1000
 
-    log_path = create_log_folder('ppo')
+    log_path = create_log_folder("ppo")
     tracker = Tracker()
 
     memory = Memory()
@@ -53,25 +50,28 @@ def train_ppo(n_episodes):
             if done:
                 mean_entropy = ppo.update(memory, episode)
                 memory.clear()
-                print(f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}")
+                print(
+                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
+                )
                 break
 
     ppo.save_model(log_path)
     tracker.plot(log_path)
 
 
-def deploy_ppo(n_episodes):
+def deploy_ppo(n_episodes, wait):
 
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
-    
+
     ppo = PPO(n_state=14, n_actions=6)
 
-    current_folder = get_last_folder('ppo')
+    current_folder = get_last_folder("ppo")
     if not current_folder:
-        print('No model')
+        print("No model")
         return
-    current_model = os.path.join(current_folder, 'ppo.pth')    
+    current_model = os.path.join(current_folder, "ppo.pth")
+    print(current_model)
     ppo.load_model(current_model)
 
     for _ in range(n_episodes):
@@ -83,7 +83,7 @@ def deploy_ppo(n_episodes):
             state, reward, done, _ = env.step(action)
             episode_reward += reward
             env.render()
-            time.sleep(0.1)
+            time.sleep(wait)
             if done:
                 print(f"Reward {episode_reward}")
                 break

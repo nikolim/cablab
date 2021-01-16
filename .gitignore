@@ -5,3 +5,5 @@ common/__pycache__
 /__pycache__
 NOTES.md
 .coverage
+/hmtlcov
+/algorithms/machin*

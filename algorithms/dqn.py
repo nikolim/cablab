@@ -1,175 +1,110 @@
 import os
-import gym
-import torch
+import time
 import numpy as np
 
 from collections import deque
-import random
-
-import copy
-from torch.autograd import Variable
-
-from features import *
-from plotting import *
-
-from dqn_model import DQN, gen_epsilon_greedy_policy
-
 from pyvirtualdisplay import Display
 
-disp = Display().start()
-
+import gym
 import gym_cabworld
 
-env_name = "Cabworld-v6"
-env = gym.envs.make(env_name)
+from algorithms.dqn_model import DQN, gen_epsilon_greedy_policy
+from common.features import clip_state, cut_off_state
+from common.logging import create_log_folder, get_last_folder
+from common.logging import Tracker
 
-def q_learning(
-    env,
-    estimator,
-    n_episode,
-    replay_size,
-    target_update=5,
-    gamma=0.99,
-    epsilon=1,
-    epsilon_decay=0.95,
-):
-    for episode in range(n_episode):
+
+def train_dqn(n_episodes):
+
+    Display().start()
+    env_name = "Cabworld-v0"
+    env = gym.make(env_name)
+
+    n_states = 14
+    n_actions = 6
+    n_hidden = 32
+
+    lr = 0.01
+    gamma = 0.99
+    epsilon = 1
+    epsilon_decay = 0.95
+    replay_size = 100
+    target_update = 5
+
+    log_path = create_log_folder("dqn")
+    tracker = Tracker()
+
+    dqn = DQN(n_states, n_actions, n_hidden, lr)
+    memory = deque(maxlen=50000)
+
+    for episode in range(n_episodes):
+
+        tracker.new_episode()
 
         if episode % target_update == 0:
-            estimator.copy_target()
+            dqn.copy_target()
 
-        policy = gen_epsilon_greedy_policy(estimator, epsilon, n_action)
+        policy = gen_epsilon_greedy_policy(dqn, epsilon, n_actions)
         state = env.reset()
-        # state = feature_engineering(state)
-        state = tuple((list(env.reset()))[:n_state])
+        # state = clip_state(state, n_clip)
+        # state = cut_off_state(state, n_state)
         is_done = False
-
-        saved_rewards = [0, 0, 0, 0]
-        running_reward = 0
-        pick_ups = 0
-        number_of_action_4 = 0
-        number_of_action_5 = 0
-        wrong_pick_up_or_drop_off = 0
-
-        passenger = False
-        pick_up_drop_off_steps = []
-        drop_off_pick_up_steps = []
-        passenger_steps = 0
-        no_passenger_steps = 0
-
         steps = 0
 
         while not is_done:
-            action = policy(state)
+
             steps += 1
-
-            if passenger:
-                passenger_steps += 1
-            else:
-                no_passenger_steps += 1
-
-            if action == 4:
-                number_of_action_4 += 1
-            if action == 5:
-                number_of_action_5 += 1
-            if action == 6:
-                saved_rewards[3] += 1
+            action = policy(state)
 
             next_state, reward, is_done, _ = env.step(action)
-            next_state = tuple((list(next_state))[:n_state])
-            # next_state = feature_engineering(next_state)
-            saved_rewards = track_reward(reward, saved_rewards)
+            # next_state = clip_state(next_state, n_clip)
+            # next_state = cut_off_state(next_state, n_state)
 
-            if reward == -10:
-                wrong_pick_up_or_drop_off += 1
-
-            if reward == 100:
-                if passenger:
-                    # drop-off
-                    drop_off_pick_up_steps.append(no_passenger_steps)
-                    no_passenger_steps = 0
-                else:
-                    # pick-up
-                    pick_up_drop_off_steps.append(passenger_steps)
-                    passenger_steps = 0
-
-                passenger = not passenger
-                pick_ups += 1
-                reward = 1000
-
-            running_reward += reward
-
+            tracker.track_reward(reward)
             memory.append((state, action, next_state, reward, is_done))
 
             if steps % 100 == 0:
-                estimator.replay(memory, replay_size, gamma)
+                dqn.replay(memory, replay_size, gamma)
 
             if is_done:
                 print(
-                    f"Episode: {episode} Reward: {running_reward} Passengers: {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Illegal-Pick-Ups {wrong_pick_up_or_drop_off} Epsilon {epsilon}"
+                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
                 )
                 break
-
             state = next_state
-
         epsilon = max(epsilon * epsilon_decay, 0.01)
 
-        rewards.append(running_reward)
-        illegal_pick_ups.append(saved_rewards[1])
-        illegal_moves.append(saved_rewards[2])
-        do_nothing.append(saved_rewards[3])
-        episolons.append(epsilon)
-        n_passengers.append(pick_ups // 2)
-        mean_pick_up_path.append((np.array(drop_off_pick_up_steps).mean()))
-        mean_drop_off_path.append((np.array(pick_up_drop_off_steps).mean()))
+    dqn.save_model(log_path)
+    tracker.plot(log_path)
 
 
-counter = 0
-n_state = 4
-n_action = 4
-n_hidden = 8
-lr = 0.01
+def deploy_dqn(n_episodes, wait):
 
-n_episode = 100
-replay_size = 100
-target_update = 5
+    env_name = "Cabworld-v0"
+    env = gym.make(env_name)
 
-illegal_pick_ups = []
-illegal_moves = []
-do_nothing = []
-episolons = []
-n_passengers = []
-rewards = []
-mean_pick_up_path = []
-mean_drop_off_path = []
+    n_states = 14
+    n_actions = 6
+    dqn = DQN(n_states, n_actions)
 
-dqn = DQN(n_state, n_action, n_hidden, lr)
-memory = deque(maxlen=50000)
+    current_folder = get_last_folder("dqn")
+    if not current_folder:
+        print("No model")
+        return
+    current_model = os.path.join(current_folder, "dqn.pth")
+    print(current_model)
+    dqn.load_model(current_model)
 
-dirname = os.path.dirname(__file__)
-log_path = os.path.join(dirname, "../runs", "dqn")
-if not os.path.exists(log_path):
-    os.mkdir(log_path)
-log_folders = os.listdir(log_path)
-if len(log_folders) == 0:
-    folder_number = 0
-else:
-    folder_number = max([int(elem) for elem in log_folders]) + 1
-
-log_path = os.path.join(log_path, str(folder_number))
-os.mkdir(log_path)
-with open(os.path.join(log_path, "info.txt"), "w+") as info_file:
-    info_file.write(env_name + "\n")
-    info_file.write("Episodes:" + str(n_episode) + "\n")
-
-
-q_learning(env, dqn, n_episode, replay_size, target_update, gamma=0.99, epsilon=1)
-dqn.save_model(log_path)
-
-plot_rewards(rewards, log_path)
-plot_rewards_and_epsilon(rewards, episolons, log_path)
-plot_rewards_and_passengers(rewards, n_passengers, log_path)
-plot_rewards_and_illegal_actions(
-    rewards, illegal_pick_ups, illegal_moves, do_nothing, log_path
-)
-plot_mean_pick_up_drop_offs(mean_pick_up_path, mean_drop_off_path, log_path)
+    for _ in range(n_episodes):
+        state = env.reset()
+        episode_reward = 0
+        done = False
+        while not done:
+            action = dqn.deploy(state)
+            state, reward, done, _ = env.step(action)
+            episode_reward += reward
+            env.render()
+            time.sleep(wait)
+            if done:
+                print(f"Reward {episode_reward}")
+                break

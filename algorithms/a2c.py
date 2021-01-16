@@ -1,92 +1,60 @@
 import os
-import gym
-import gym_cabworld
-import random
 import time
-import torch
 import numpy as np
-from collections import deque
-from features import track_reward, clip_state
-
-from a2c_model import PolicyNetwork
-
+import torch
 from pyvirtualdisplay import Display
 
-disp = Display().start()
+import gym
+import gym_cabworld
 
-def actor_critic(env, estimator, n_episode, gamma):
+from algorithms.a2c_model import PolicyNetwork
+from common.features import clip_state, cut_off_state
+from common.logging import create_log_folder, get_last_folder
+from common.logging import Tracker
 
-    for episode in range(n_episode):
 
-        n_clip = 6
+def train_a2c(n_episodes):
 
-        if episode >= 50:
-            n_clip = 6
+    Display().start()
+    env_name = "Cabworld-v0"
+    env = gym.make(env_name)
+
+    n_states = 14
+    n_actions = 6
+    max_timesteps = 1000
+    gamma = 0.99
+    rewards = []
+
+    log_path = create_log_folder("a2c")
+    tracker = Tracker()
+
+    a2c = PolicyNetwork(n_states, n_actions)
+
+    for episode in range(n_episodes):
+
+        tracker.new_episode()
+        state = env.reset()
+        # state = clip_state(state, n_clip)
+        # state = cut_off_state(state, n_state)
 
         log_probs = []
-        running_reward = 0
         state_values = []
-        state = env.reset()
-        # state = tuple((list(state))[:n_state])
-        state = clip_state(state, n_clip)
 
-        saved_rewards = [0, 0, 0, 0]
-        pick_ups = 0
-        number_of_action_4 = 0
-        number_of_action_5 = 0
-        wrong_pick_up_or_drop_off = 0
+        for _ in range(max_timesteps):
 
-        passenger = False
-        pick_up_drop_off_steps = []
-        drop_off_pick_up_steps = []
-        passenger_steps = 0
-        no_passenger_steps = 0
+            action, log_prob, state_value = a2c.get_action(state)
+            state, reward, done, _ = env.step(action)
+            # state = clip_state(state, n_clip)
+            # state = cut_off_state(state, n_state)
 
-        while True:
-            action, log_prob, state_value = estimator.get_action(state)
-            next_state, reward, is_done, _ = env.step(action)
-            # next_state = tuple((list(next_state))[:n_state])
-            next_state = clip_state(next_state, n_clip)
-
-            if passenger:
-                passenger_steps += 1
-            else:
-                no_passenger_steps += 1
-
-            if action == 4:
-                number_of_action_4 += 1
-            if action == 5:
-                number_of_action_5 += 1
-            if action == 6:
-                saved_rewards[3] += 1
-
+            tracker.track_reward(reward)
             log_probs.append(log_prob)
             state_values.append(state_value)
             rewards.append(reward)
 
-            saved_rewards = track_reward(reward, saved_rewards)
-
-            if reward == -10:
-                wrong_pick_up_or_drop_off += 1
-
-            if reward == 100:
-                if passenger:
-                    # drop-off
-                    drop_off_pick_up_steps.append(no_passenger_steps)
-                    no_passenger_steps = 0
-                else:
-                    # pick-up
-                    pick_up_drop_off_steps.append(passenger_steps)
-                    passenger_steps = 0
-                passenger = not passenger
-                pick_ups += 1
-                reward = 1000
-            
-            running_reward += reward
-
-            if is_done:
+            if done:
                 print(
-                f"Episode: {episode} Reward: {running_reward} Passengers {pick_ups//2} N-Action-4: {number_of_action_4} N-Action-5: {number_of_action_5} Illegal-Pick-Ups {wrong_pick_up_or_drop_off}"
+                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
                 )
                 returns = []
                 Gt = 0
@@ -99,63 +67,42 @@ def actor_critic(env, estimator, n_episode, gamma):
                 returns = returns[::-1]
                 returns = torch.tensor(returns)
                 returns = (returns - returns.mean()) / (returns.std() + 1e-9)
-                estimator.update(returns, log_probs, state_values, episode)
-                uncertainty = sum(log_probs) * -1
-                rewards.append(running_reward)
-                illegal_pick_ups.append(saved_rewards[1])
-                illegal_moves.append(saved_rewards[2])
-                do_nothing.append(saved_rewards[3])
-                uncertainties.append(uncertainty)
-                n_passengers.append(pick_ups // 2)
-                mean_pick_up_path.append((np.array(drop_off_pick_up_steps).mean()))
-                mean_drop_off_path.append((np.array(pick_up_drop_off_steps).mean()))
+                a2c.update(returns, log_probs, state_values, episode)
                 break
 
-            state = next_state
+    a2c.save_model(log_path)
+    tracker.plot(log_path)
 
 
-env_name = "Cabworld-v6"
-env = gym.make(env_name)
-n_action = 6
-n_state = 20
-n_episode = 100
-lr = 0.001
 
-dirname = os.path.dirname(__file__)
-log_path = os.path.join(dirname, "../runs", "a2c")
-if not os.path.exists(log_path):
-    os.mkdir(log_path)
-log_folders = os.listdir(log_path)
-if len(log_folders) == 0:
-    folder_number = 0
-else:
-    folder_number = max([int(elem) for elem in log_folders]) + 1
+def deploy_a2c(n_episodes, wait):
 
-log_path = os.path.join(log_path, str(folder_number))
-os.mkdir(log_path)
-with open(os.path.join(log_path, "info.txt"), "w+") as info_file:
-    info_file.write(env_name + "\n")
-    info_file.write("Episodes:" + str(n_episode) + "\n")
+    env_name = "Cabworld-v0"
+    env = gym.make(env_name)
 
-illegal_pick_ups = []
-illegal_moves = []
-do_nothing = []
-uncertainties = []
-n_passengers = []
-rewards = []
-mean_pick_up_path = []
-mean_drop_off_path = []
+    n_states = 14
+    n_actions = 6
 
-estimator = PolicyNetwork(n_state, n_action)
-actor_critic(env, estimator, n_episode, 0.99)
-estimator.save_model(log_path)
+    a2c = PolicyNetwork(n_states, n_actions)
 
-from plotting import *
+    current_folder = get_last_folder("a2c")
+    if not current_folder:
+        print("No model")
+        return
+    current_model = os.path.join(current_folder, "a2c.pth")
+    print(current_model)
+    a2c.load_model(current_model)
 
-plot_rewards(rewards, log_path)
-plot_rewards_and_epsilon(rewards, uncertainties, log_path)
-plot_rewards_and_passengers(rewards, n_passengers, log_path)
-plot_rewards_and_illegal_actions(
-    rewards, illegal_pick_ups, illegal_moves, do_nothing, log_path
-)
-plot_mean_pick_up_drop_offs(mean_pick_up_path, mean_drop_off_path, log_path)
+    for _ in range(n_episodes):
+        state = env.reset()
+        episode_reward = 0
+        done = False
+        while not done:
+            action = a2c.get_action(state)
+            state, reward, done, _ = env.step(action)
+            episode_reward += reward
+            env.render()
+            time.sleep(wait)
+            if done:
+                print(f"Reward {episode_reward}")
+                break

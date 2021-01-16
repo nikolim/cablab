@@ -141,7 +141,7 @@ class M_DQN_Agent:
 
         self.action_step = 4
         self.last_action = None
-        
+
         # Q-Network
         self.qnetwork_local = DDQN(state_size, action_size, layer_size, seed).to(device)
         self.qnetwork_target = DDQN(state_size, action_size, layer_size, seed).to(

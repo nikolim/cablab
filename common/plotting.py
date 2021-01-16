@@ -77,9 +77,7 @@ def plot_rewards_and_passengers(rewards, n_passenger, path):
     plt.savefig(os.path.join(path, "rewards_passengers.png"))
 
 
-def plot_rewards_and_illegal_actions(
-    rewards, illegal_drop_offs, illegal_moves, path
-):
+def plot_rewards_and_illegal_actions(rewards, illegal_drop_offs, illegal_moves, path):
 
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
