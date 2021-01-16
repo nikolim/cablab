@@ -8,7 +8,7 @@ def create_log_folder(algorithm):
     dirname = os.path.dirname(__file__)
     log_path = os.path.join(dirname, "../runs", str(algorithm))
     if not os.path.exists(log_path):
-        os.mkdir(log_path)
+        os.makedirs(log_path)
     log_folders = os.listdir(log_path)
     if len(log_folders) == 0:
         folder_number = 0

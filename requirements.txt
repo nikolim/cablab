@@ -3,7 +3,6 @@ appdirs==1.4.4
 argon2-cffi==20.1.0
 astunparse==1.6.3
 async-generator==1.10
-atari-py==0.2.6
 attrs==20.2.0
 autopep8==1.5.4
 backcall==0.2.0
