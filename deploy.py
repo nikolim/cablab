@@ -26,14 +26,14 @@ args = parser.parse_args()
 valid_algorithms = ["ppo", "dqn"]
 
 if args.algorithm == "ppo":
-    deploy_ppo(int(args.number), int(args.wait))
+    deploy_ppo(int(args.number), float(args.wait))
 elif args.algorithm == "dqn":
-    deploy_dqn(int(args.number), int(args.wait))
+    deploy_dqn(int(args.number), float(args.wait))
 elif args.algorithm == "a2c":
-    deploy_a2c(int(args.number), int(args.wait))
+    deploy_a2c(int(args.number), float(args.wait))
 elif args.algorithm == "mdqn":
-    deploy_mdqn(int(args.number), int(args.wait))
+    deploy_mdqn(int(args.number), float(args.wait))
 elif args.algorithm == "rand":
-    deploy_random(int(args.number), int(args.wait))
+    deploy_random(int(args.number), float(args.wait))
 else:
     print(f"Not a valid algorithm: {args.algorithm}")

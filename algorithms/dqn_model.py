@@ -11,7 +11,7 @@ counter = 0
 
 
 class DQN:
-    def __init__(self, n_state, n_action, n_hidden=32, lr=0.01):
+    def __init__(self, n_state, n_action, n_hidden=16, lr=0.01):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
             torch.nn.Linear(n_state, n_hidden),
@@ -55,7 +55,6 @@ class DQN:
                     q_values_next = self.target_predict(next_state).detach()
                     q_values[action] = reward + gamma * torch.max(q_values_next).item()
                 td_targets.append(q_values)
-                # self.update(state, q_values)
             self.update(states, td_targets)
 
     def copy_target(self):
@@ -84,5 +83,4 @@ def gen_epsilon_greedy_policy(estimator, epsilon, n_action):
             q_values = estimator.predict(state)
             action = torch.argmax(q_values).item()
             return action
-
     return policy_function

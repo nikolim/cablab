@@ -27,7 +27,7 @@ def train_dqn(n_episodes):
     lr = 0.01
     gamma = 0.99
     epsilon = 1
-    epsilon_decay = 0.95
+    epsilon_decay = 0.99
     replay_size = 100
     target_update = 5
 
@@ -63,9 +63,9 @@ def train_dqn(n_episodes):
             tracker.track_reward(reward)
             memory.append((state, action, next_state, reward, is_done))
 
-            if steps % 100 == 0:
+            if episode > 50 and steps % 100 == 0:
                 dqn.replay(memory, replay_size, gamma)
-
+                
             if is_done:
                 print(
                     f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"

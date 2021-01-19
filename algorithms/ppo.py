@@ -83,7 +83,7 @@ def deploy_ppo(n_episodes, wait):
             state, reward, done, _ = env.step(action)
             episode_reward += reward
             env.render()
-            time.sleep(wait)
+            time.sleep(float(wait))
             if done:
                 print(f"Reward {episode_reward}")
                 break
