@@ -74,7 +74,6 @@ def train_a2c(n_episodes):
     tracker.plot(log_path)
 
 
-
 def deploy_a2c(n_episodes, wait):
 
     env_name = "Cabworld-v0"

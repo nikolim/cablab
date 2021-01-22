@@ -75,6 +75,7 @@ class DQN:
             q_values = self.model(torch.Tensor(s))
             return (torch.argmax(q_values)).item()
 
+
 def gen_epsilon_greedy_policy(estimator, epsilon, n_action):
     def policy_function(state):
         if random.random() < epsilon:
@@ -83,4 +84,5 @@ def gen_epsilon_greedy_policy(estimator, epsilon, n_action):
             q_values = estimator.predict(state)
             action = torch.argmax(q_values).item()
             return action
+
     return policy_function

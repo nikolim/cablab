@@ -71,7 +71,7 @@ def train_mdqn(n_episodes):
                     f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
                 )
                 break
-        
+
         eps = round(max(eps * eps_decay, 0.001), 3)
 
     mdqn.save_model(log_path)

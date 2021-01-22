@@ -9,6 +9,10 @@ from algorithms.random_policy import train_random
 from algorithms.machin_dqn import train_machin_dqn
 from algorithms.machin_ppo import train_machin_ppo
 
+from algorithms.ma_dqn import train_ma_dqn
+from algorithms.ma_ppo import train_ma_ppo
+
+
 parser = argparse.ArgumentParser(
     description="Train: select algorithm and number of episodes"
 )
@@ -34,5 +38,9 @@ elif args.algorithm == "machin-dqn":
     train_machin_dqn(int(args.number))
 elif args.algorithm == "machin-ppo":
     train_machin_ppo(int(args.number))
+elif args.algorithm == "ma-dqn":
+    train_ma_dqn(int(args.number))
+elif args.algorithm == "ma-ppo":
+    train_ma_ppo(int(args.number))
 else:
     print("Not a valid algorithm: {args.algorithm}")

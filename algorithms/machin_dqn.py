@@ -40,22 +40,23 @@ class QNet(nn.Module):
 def train_machin_dqn(n_episodes):
 
     from pyvirtualdisplay import Display
+
     Display().start()
 
     q_net = QNet(observe_dim, action_num)
     q_net_t = QNet(observe_dim, action_num)
 
-    dqn = DQN(q_net, q_net_t,
-              t.optim.Adam,
-              nn.MSELoss(reduction='sum'), replay_size = 50000)
+    dqn = DQN(
+        q_net, q_net_t, t.optim.Adam, nn.MSELoss(reduction="sum"), replay_size=50000
+    )
 
     episode, step = 0, 0
     total_reward = 0
 
     for episode in range(n_episodes):
-        
+
         tracker.new_episode()
-        
+
         episode += 1
         total_reward = 0
         terminal = False
@@ -68,9 +69,7 @@ def train_machin_dqn(n_episodes):
             with t.no_grad():
                 old_state = state
                 # agent model inference
-                action = dqn.act_discrete_with_noise(
-                    {"state": old_state}
-                )
+                action = dqn.act_discrete_with_noise({"state": old_state})
                 state, reward, terminal, _ = env.step(action.item())
                 state = t.tensor(state, dtype=t.float32).view(1, observe_dim)
 
@@ -78,19 +77,23 @@ def train_machin_dqn(n_episodes):
 
                 total_reward += reward
 
-                dqn.store_transition({
-                    "state": {"state": old_state},
-                    "action": {"action": action},
-                    "next_state": {"state": state},
-                    "reward": reward,
-                    "terminal": terminal or step == max_steps
-                })
+                dqn.store_transition(
+                    {
+                        "state": {"state": old_state},
+                        "action": {"action": action},
+                        "next_state": {"state": state},
+                        "reward": reward,
+                        "terminal": terminal or step == max_steps,
+                    }
+                )
 
         # update, update more if episode is longer, else less
         if episode > 50:
             for _ in range(step):
                 dqn.update()
 
-        print(f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}")
-    
+        print(
+            f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
+        )
+
     tracker.plot(log_path)
