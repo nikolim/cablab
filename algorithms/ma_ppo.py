@@ -1,7 +1,9 @@
 import os
 import time
 import numpy as np
+
 from pyvirtualdisplay import Display
+Display().start()
 
 import gym
 import gym_cabworld
@@ -23,14 +25,14 @@ def train_ma_ppo(n_episodes):
     max_timesteps = 1000
 
     log_path = create_log_folder("mappo")
-    # tracker = Tracker()
+    tracker = Tracker()
 
     memory = Memory()
     mappo = MAPPO(n_states, n_actions)
 
     for episode in range(n_episodes):
 
-        # tracker.new_episode()
+        tracker.new_episode()
         states = env.reset()
         # state = clip_state(state, n_clip)
         # state = cut_off_state(state, n_state)
@@ -44,7 +46,7 @@ def train_ma_ppo(n_episodes):
             # state = clip_state(state, n_clip)
             # state = cut_off_state(state, n_state)
 
-            #tracker.track_reward(rewards)
+            tracker.track_reward(rewards[0])
 
             total_reward += sum(rewards)
 
@@ -54,14 +56,13 @@ def train_ma_ppo(n_episodes):
             if done:
                 mean_entropy = mappo.update(memory, episode)
                 memory.clear()
-                # print(
-                #     f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
-                # )
-                print(f'Episode:{episode} Reward:{total_reward}')
+                print(
+                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
+                )
                 break
 
     # mappo.save_model(log_path)
-    # tracker.plot(log_path)
+    tracker.plot(log_path)
 
 
 def deploy_ppo(n_episodes, wait):

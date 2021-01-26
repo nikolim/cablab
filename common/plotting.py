@@ -47,6 +47,27 @@ def plot_rewards(rewards, path):
     plt.savefig(os.path.join(path, "rewards.png"))
 
 
+def plot_multiple_rewards(multiple_rewards, path):
+
+    fig, ax1 = plt.subplots()
+    ax1.set_xlabel("Episodes")
+    ax1.set_ylabel("Reward")
+
+    np_reward_arr = [np.array([rewards]) for rewards in multiple_rewards]
+    summed_reward = np.sum(np_reward_arr, axis=0)
+
+    mean_rewards, std_rewards, x = smoothing_mean_std(summed_reward.T, step_size=10)
+    ax1.plot(x, mean_rewards, color="darkblue")
+    ax1.fill_between(x, mean_rewards + std_rewards, mean_rewards - std_rewards, alpha=0.2, color=REWARD_COLOR)
+
+    for rewards in multiple_rewards:
+        mean_rewards, std_rewards, x = smoothing_mean_std(rewards, step_size=10)
+        ax1.plot(x, mean_rewards, color=REWARD_COLOR)
+        ax1.fill_between(x, mean_rewards + std_rewards, mean_rewards - std_rewards, alpha=0.2, color=REWARD_COLOR)
+    
+    plt.savefig(os.path.join(path, "multiple_rewards.png"))
+
+
 def plot_rewards_and_entropy(rewards, entropy, path):
 
     mean_rewards, std_rewards, x = smoothing_mean_std(rewards, step_size=10)

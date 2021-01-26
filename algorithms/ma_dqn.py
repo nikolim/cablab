@@ -11,7 +11,7 @@ import gym_cabworld
 from algorithms.dqn_model import DQN, gen_epsilon_greedy_policy
 from common.features import clip_state, cut_off_state
 from common.logging import create_log_folder, get_last_folder
-from common.logging import Tracker
+from common.logging import MultiTracker
 
 
 def train_ma_dqn(n_episodes):
@@ -32,10 +32,9 @@ def train_ma_dqn(n_episodes):
     target_update = 5
 
     log_path = create_log_folder("ma-dqn")
-    log_path2 = create_log_folder("ma-dqn")
+    # log_path2 = create_log_folder("ma-dqn")
 
-    tracker = Tracker()
-    tracker2 = Tracker()
+    tracker = MultiTracker(n_agents=2)
 
     dqn = DQN(n_states, n_actions, n_hidden, lr)
     memory = deque(maxlen=50000)
@@ -46,7 +45,6 @@ def train_ma_dqn(n_episodes):
     for episode in range(n_episodes):
 
         tracker.new_episode()
-        tracker2.new_episode()
 
         if episode % target_update == 0:
             dqn.copy_target()
@@ -74,8 +72,7 @@ def train_ma_dqn(n_episodes):
             # next_state = clip_state(next_state, n_clip)
             # next_state = cut_off_state(next_state, n_state)
 
-            tracker.track_reward(reward)
-            tracker2.track_reward(reward2)
+            tracker.track_reward([reward, reward2])
             memory.append((state, action, next_state, reward, is_done))
             memory2.append((state2, action2, next_state2, reward2, is_done))
 
@@ -93,9 +90,8 @@ def train_ma_dqn(n_episodes):
         epsilon = max(epsilon * epsilon_decay, 0.01)
 
     dqn.save_model(log_path)
-    dqn2.save_model(log_path2)
+    # dqn2.save_model(log_path2)
     tracker.plot(log_path)
-    tracker2.plot(log_path2)
 
 
 def deploy_dqn(n_episodes, wait):

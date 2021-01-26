@@ -3,7 +3,9 @@ import time
 import numpy as np
 
 from collections import deque
+
 from pyvirtualdisplay import Display
+Display().start()
 
 import gym
 import gym_cabworld
@@ -16,7 +18,6 @@ from common.logging import Tracker
 
 def train_dqn(n_episodes):
 
-    Display().start()
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 

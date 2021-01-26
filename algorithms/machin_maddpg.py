@@ -13,12 +13,10 @@ env = gym.make("Cabworld-v1")
 env.discrete_action_input = False
 observe_dim = 14
 action_num = 6
-max_episodes = 20
+max_episodes = 100
 max_steps = 1000
-# number of agents in env, fixed, do not change
 agent_num = 2
-solved_reward = 10000
-solved_repeat = 5
+
 
 # model definition
 class ActorConcrete(nn.Module):
@@ -53,6 +51,10 @@ class Critic(nn.Module):
 
 
 if __name__ == "__main__":
+
+    from pyvirtualdisplay import Display
+    Display().start()
+
     actor = ActorConcrete(observe_dim, action_num)
     critic = Critic(observe_dim * agent_num, action_num * agent_num)
 
@@ -90,7 +92,6 @@ if __name__ == "__main__":
                 action_probs = [r[1] for r in results]
 
                 states, rewards, terminals, _ = env.step(actions)
-                env.render()
                 states = [
                     t.tensor(st, dtype=t.float32).view(1, observe_dim) for st in states
                 ]
@@ -118,4 +119,4 @@ if __name__ == "__main__":
                 maddpg.update()
 
         # show reward
-        logger.info("Episode {} total reward={:.2f}".format(episode, total_reward))
+        print("Episode {} total reward={:.2f}".format(episode, total_reward))
