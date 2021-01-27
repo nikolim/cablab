@@ -64,8 +64,9 @@ def train_dqn(n_episodes):
             tracker.track_reward(reward)
             memory.append((state, action, next_state, reward, is_done))
 
-            if episode > 50 and steps % 100 == 0:
+            if episode > 0 and steps % 100 == 0:
                 dqn.replay(memory, replay_size, gamma)
+                # dqn.replay_munchhausen(memory, replay_size, gamma)
 
             if is_done:
                 print(
