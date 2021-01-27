@@ -16,7 +16,7 @@ from common.logging import create_log_folder, get_last_folder
 from common.logging import Tracker
 
 
-def train_dqn(n_episodes):
+def train_dqn(n_episodes, munchhausen=False):
 
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
@@ -64,9 +64,12 @@ def train_dqn(n_episodes):
             tracker.track_reward(reward)
             memory.append((state, action, next_state, reward, is_done))
 
-            if episode > 0 and steps % 100 == 0:
-                dqn.replay(memory, replay_size, gamma)
-                # dqn.replay_munchhausen(memory, replay_size, gamma)
+            if munchhausen:
+                if episode > 50 and steps % 10 == 0:
+                    dqn.replay_munchhausen(memory, replay_size * 10, gamma)
+            else: 
+                if episode > 50 and steps % 100 == 0:
+                    dqn.replay(memory, replay_size, gamma)
 
             if is_done:
                 print(

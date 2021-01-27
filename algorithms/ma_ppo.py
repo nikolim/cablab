@@ -65,7 +65,7 @@ def train_ma_ppo(n_episodes):
     tracker.plot(log_path)
 
 
-def deploy_ppo(n_episodes, wait):
+def deploy_ma_ppo(n_episodes, wait):
 
     env_name = "Cabworld-v1"
     env = gym.make(env_name)

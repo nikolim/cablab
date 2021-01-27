@@ -20,6 +20,7 @@ parser.add_argument(
     "-a", "--algorithm", type=str, required=True, help="Algorithm to run"
 )
 parser.add_argument("-n", "--number", required=True, help="Number of episodes to run")
+parser.add_argument("-m", "--munchhausen", type=bool, default=False, required=False, help="Munchhausen add-on for DQN")
 args = parser.parse_args()
 
 valid_algorithms = ["ppo", "dqn"]
@@ -27,7 +28,7 @@ valid_algorithms = ["ppo", "dqn"]
 if args.algorithm == "ppo":
     train_ppo(int(args.number))
 elif args.algorithm == "dqn":
-    train_dqn(int(args.number))
+    train_dqn(int(args.number), munchhausen=args.munchhausen)
 elif args.algorithm == "a2c":
     train_a2c(int(args.number))
 elif args.algorithm == "mdqn":
