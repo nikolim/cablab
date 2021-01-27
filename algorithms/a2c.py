@@ -2,7 +2,9 @@ import os
 import time
 import numpy as np
 import torch
+
 from pyvirtualdisplay import Display
+Display().start()
 
 import gym
 import gym_cabworld
@@ -15,7 +17,6 @@ from common.logging import Tracker
 
 def train_a2c(n_episodes):
 
-    Display().start()
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
@@ -72,7 +73,6 @@ def train_a2c(n_episodes):
 
     a2c.save_model(log_path)
     tracker.plot(log_path)
-
 
 
 def deploy_a2c(n_episodes, wait):

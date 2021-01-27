@@ -8,13 +8,13 @@ class ActorCriticModel(nn.Module):
     def __init__(self, n_state, n_actions):
         super(ActorCriticModel, self).__init__()
 
-        self.fc1 = nn.Linear(n_state, 32)
+        self.fc1 = nn.Linear(n_state, 16)
 
-        self.action1 = nn.Linear(32, 32)
-        self.action2 = nn.Linear(32, n_actions)
+        self.action1 = nn.Linear(16, 16)
+        self.action2 = nn.Linear(16, n_actions)
 
-        self.value1 = nn.Linear(32, 32)
-        self.value2 = nn.Linear(32, 1)
+        self.value1 = nn.Linear(16, 16)
+        self.value2 = nn.Linear(16, 1)
 
     def forward(self, x):
         x = torch.Tensor(x)
@@ -34,6 +34,7 @@ class PolicyNetwork:
         self.model = ActorCriticModel(n_state, n_actions)
         self.optimizer = torch.optim.Adam(self.model.parameters(), 0.01)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     def predict(self, s):
         return self.model(torch.Tensor(s))
 

@@ -25,11 +25,18 @@ https://gitlab.com/nlimbrun/cabworld
 
 ## Currently implemented Algorithms
 
-1. DQN
-5. MDQN
-2. A2C
-3. PPO
-4. MA-PPO (individual)
+### Single Agent
+
+1. DQN (https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
+2. Munchhausen-DQN (https://arxiv.org/pdf/2007.14430.pdf)
+3. A2C (https://papers.nips.cc/paper/1999/file/6449f44a102fde848669bdd9eb6b76fa-Paper.pdf)
+4. PPO (https://arxiv.org/pdf/1707.06347.pdf)
+
+### Multi Agent 
+
+1. MA-DQN (individual)
+2. MA-PPO (individual)
+
 
 ## Subtasks​
 
@@ -48,11 +55,12 @@ The cabworld is a relativly complex environment with different subtasks which ca
 
 ### Training
 ```bash
-python3 train.py -a ppo -n 1
+python3 train.py -a ppo -n 100
+python3 train.py -a dqn -n 100 -m True
 ```
 ```
 usage: python3 train.py -a ALGORITHM -n NUMBER
-error: the following arguments are required: -a/--algorithm, -n/--number
+error: the following arguments are required: -a/--algorithm, -n/--number, (-m/--munchhausen)
 ```
 
 ### Deploy 
@@ -67,8 +75,26 @@ usage: python3 deploy.py -a ALGORITHM -n NUMBER [-w WAIT]
 error: the following arguments are required: -a/--algorithm, -n/--number
 ```
 
+### Plots 
+
+Every traning runs creates the following plots (here for single-agent-DQN)
+
+<br>
+<p>
+	<div align="center">
+		<img width="auto" height="400px" src="img/rewards.png" align="center">
+		<img width="auto" height="400px" src="img/rewards_passengers.png" align="center">
+		<img width="auto" height="400px" src="img/pick_up_drop_off_path.png" align="center">
+	</div>
+</p>
+<br>
+
+
 
 ## Changelog
+
+### [0.3] (https://gitlab.com/nlimbrun/cablab/-/tags/release_0.3) (27.01.2021)
+- Added Multi-Agent, Munchhausen-Addon for DQN
 
 ### [0.2] (https://gitlab.com/nlimbrun/cablab/-/tags/release_0.2) (16.01.2021)
 - Unified training and deployment, add CI

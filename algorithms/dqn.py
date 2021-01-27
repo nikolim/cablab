@@ -3,7 +3,9 @@ import time
 import numpy as np
 
 from collections import deque
+
 from pyvirtualdisplay import Display
+Display().start()
 
 import gym
 import gym_cabworld
@@ -14,20 +16,19 @@ from common.logging import create_log_folder, get_last_folder
 from common.logging import Tracker
 
 
-def train_dqn(n_episodes):
+def train_dqn(n_episodes, munchhausen=False):
 
-    Display().start()
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
     n_states = 14
     n_actions = 6
-    n_hidden = 32
+    n_hidden = 16
 
     lr = 0.01
     gamma = 0.99
     epsilon = 1
-    epsilon_decay = 0.95
+    epsilon_decay = 0.99
     replay_size = 100
     target_update = 5
 
@@ -63,8 +64,12 @@ def train_dqn(n_episodes):
             tracker.track_reward(reward)
             memory.append((state, action, next_state, reward, is_done))
 
-            if steps % 100 == 0:
-                dqn.replay(memory, replay_size, gamma)
+            if munchhausen:
+                if episode > 50 and steps % 10 == 0:
+                    dqn.replay_munchhausen(memory, replay_size * 10, gamma)
+            else: 
+                if episode > 50 and steps % 100 == 0:
+                    dqn.replay(memory, replay_size, gamma)
 
             if is_done:
                 print(
