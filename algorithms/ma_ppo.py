@@ -11,7 +11,7 @@ import gym_cabworld
 from algorithms.ma_ppo_models import Memory, MAPPO
 from common.features import clip_state, cut_off_state
 from common.logging import create_log_folder, get_last_folder
-from common.logging import Tracker
+from common.logging import MultiTracker
 
 
 def train_ma_ppo(n_episodes):
@@ -25,7 +25,7 @@ def train_ma_ppo(n_episodes):
     max_timesteps = 1000
 
     log_path = create_log_folder("mappo")
-    tracker = Tracker()
+    tracker = MultiTracker(n_agents=2)
 
     memory = Memory()
     mappo = MAPPO(n_states, n_actions)
@@ -46,7 +46,7 @@ def train_ma_ppo(n_episodes):
             # state = clip_state(state, n_clip)
             # state = cut_off_state(state, n_state)
 
-            tracker.track_reward(rewards[0])
+            tracker.track_reward(rewards)
 
             total_reward += sum(rewards)
 

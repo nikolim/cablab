@@ -31,17 +31,19 @@ class MAActorCritic(nn.Module):
 
         self.n_agents = n_agents
         self.actors = []
+        self.actors_optimizers = []
         for _ in range(n_agents):
-            self.actors.append(
-                nn.Sequential(
+            actor = nn.Sequential(
                     nn.Linear(n_state, 32),
                     nn.Tanh(),
                     nn.Linear(32, 32),
                     nn.Tanh(),
                     nn.Linear(32, n_actions),
                     nn.Softmax(dim=-1),
-                )
-            )
+                    )
+
+            self.actors.append(actor)
+            self.actors_optimizers.append(actor.parameters())
 
         self.critic = nn.Sequential(
             nn.Linear(n_state, 32),
@@ -101,7 +103,7 @@ class MAPPO:
 
         self.policy = MAActorCritic(self.n_agents, n_state, n_actions).to(self.device)
         self.optimizer = torch.optim.Adam(
-            self.policy.parameters(), lr=self.lr, betas=self.betas
+            self.policy.critic.parameters(), lr=self.lr, betas=self.betas
         )
         self.policy_old = MAActorCritic(self.n_agents, n_state, n_actions).to(
             self.device
@@ -163,7 +165,6 @@ class MAPPO:
                     surr1s, surr2s, state_values, rewards, dist_entropys
                 )
             ]
-
             self.optimizer.zero_grad()
             for loss in losses:
                 loss.mean().backward()

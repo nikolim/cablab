@@ -114,7 +114,7 @@ if __name__ == "__main__":
                 )
 
         # update, update more if episode is longer, else less
-        if episode > 10:
+        if episode > 50:
             for _ in range(step):
                 maddpg.update()
 
