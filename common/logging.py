@@ -194,12 +194,6 @@ class MultiTracker(Tracker):
         return [picks // 2 for picks in self.pick_ups]
 
     def plot(self, log_path):
-        plot_multiple_rewards(self.rewards, log_path)
-        
-        # plot_rewards_and_passengers(self.rewards, self.n_passengers, log_path)
-        # plot_rewards_and_illegal_actions(
-        #     self.rewards, self.illegal_pick_ups, self.illegal_moves, log_path
-        # )
-        # plot_mean_pick_up_drop_offs(
-        #     self.mean_pick_up_path, self.mean_drop_off_path, log_path
-        # )
+        plot_multiple_agents(self.rewards, "rewards",log_path)
+        plot_multiple_agents(self.n_passengers, "passengers",log_path)
+        # plot_multiple_agents(self.mean_pick_up_path, "steps",log_path, sum=False)

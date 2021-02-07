@@ -2,8 +2,6 @@ import time
 import random
 import numpy as np
 
-from pyvirtualdisplay import Display
-
 import gym
 import gym_cabworld
 
@@ -27,7 +25,9 @@ def random_policy(state):
 
 def train_random(n_episodes):
 
+    from pyvirtualdisplay import Display
     Display().start()
+    
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 

@@ -2,9 +2,6 @@ import os
 import time
 import numpy as np
 
-from pyvirtualdisplay import Display
-Display().start()
-
 import gym
 import gym_cabworld
 
@@ -15,6 +12,9 @@ from common.logging import Tracker
 
 
 def train_ppo(n_episodes):
+
+    from pyvirtualdisplay import Display
+    Display().start()
 
     env_name = "Cabworld-v0"
     env = gym.make(env_name)

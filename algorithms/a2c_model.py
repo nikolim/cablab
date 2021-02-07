@@ -17,6 +17,7 @@ class ActorCriticModel(nn.Module):
         self.value2 = nn.Linear(16, 1)
 
     def forward(self, x):
+        
         x = torch.Tensor(x)
         x = F.relu(self.fc1(x))
 

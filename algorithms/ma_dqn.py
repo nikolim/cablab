@@ -14,7 +14,7 @@ from common.logging import create_log_folder, get_last_folder
 from common.logging import MultiTracker
 
 
-def train_ma_dqn(n_episodes):
+def train_ma_dqn(n_episodes, munchhausen=False):
 
     Display().start()
     env_name = "Cabworld-v1"
@@ -22,7 +22,7 @@ def train_ma_dqn(n_episodes):
 
     n_agents = 2
     n_states = 14
-    n_actions = 6
+    n_actions = 7
     n_hidden = 16
 
     lr = 0.01
@@ -108,9 +108,10 @@ def deploy_ma_dqn(n_episodes, wait):
 
     n_agents = 2
     n_states = 14
-    n_actions = 6
+    n_actions = 7
 
     current_folder = get_last_folder("ma-dqn")
+    # current_folder = get_last_folder("dqn")
     if not current_folder:
         print("No model")
         return
@@ -120,6 +121,7 @@ def deploy_ma_dqn(n_episodes, wait):
         dqn = DQN(n_states, n_actions)
         dqn_models.append(dqn)
         current_model = os.path.join(current_folder, "dqn" + str(i+1) + ".pth")
+        # current_model = os.path.join(current_folder, "dqn.pth")
         dqn_models[i].load_model(current_model)
 
     for _ in range(n_episodes):

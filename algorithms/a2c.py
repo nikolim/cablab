@@ -3,9 +3,6 @@ import time
 import numpy as np
 import torch
 
-from pyvirtualdisplay import Display
-Display().start()
-
 import gym
 import gym_cabworld
 
@@ -16,6 +13,9 @@ from common.logging import Tracker
 
 
 def train_a2c(n_episodes):
+
+    from pyvirtualdisplay import Display
+    Display().start()
 
     env_name = "Cabworld-v0"
     env = gym.make(env_name)

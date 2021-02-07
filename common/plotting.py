@@ -5,7 +5,8 @@ import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
-
+import matplotlib.colors as mc
+import colorsys
 
 REWARD_COLOR = "royalblue"
 PASSENGER_COLOR = "forestgreen"
@@ -14,9 +15,20 @@ EPSILON_COLOR = "orange"
 ILLEGAL_MOVE_COLOR = "peru"
 ILLEGAL_PICK_UP_COLOR = "sandybrown"
 DO_NOTHING_COLOR = "salmon"
+STEPS_BETWEEN_PASSENGERS = "peru"
+STANDARD_COLOR = "blue"
 
 # Seaborn backend
 sns.set()
+
+
+def adjust_lightness(color, amount=0.5):
+    try:
+        c = mc.cnames[color]
+    except:
+        c = color
+    c = colorsys.rgb_to_hls(*mc.to_rgb(c))
+    return colorsys.hls_to_rgb(c[0], max(0, min(1, amount * c[1])), c[2])
 
 
 def smoothing_mean_std(arr, step_size):
@@ -45,27 +57,6 @@ def plot_rewards(rewards, path):
     ax1.plot(x, mean_rewards, color=REWARD_COLOR)
     ax1.fill_between(x, mean_rewards + std_rewards, mean_rewards - std_rewards, alpha=0.2, color=REWARD_COLOR)
     plt.savefig(os.path.join(path, "rewards.png"))
-
-
-def plot_multiple_rewards(multiple_rewards, path):
-
-    fig, ax1 = plt.subplots()
-    ax1.set_xlabel("Episodes")
-    ax1.set_ylabel("Reward")
-
-    np_reward_arr = [np.array([rewards]) for rewards in multiple_rewards]
-    summed_reward = np.sum(np_reward_arr, axis=0)
-
-    mean_rewards, std_rewards, x = smoothing_mean_std(summed_reward.T, step_size=10)
-    ax1.plot(x, mean_rewards, color="darkblue")
-    ax1.fill_between(x, mean_rewards + std_rewards, mean_rewards - std_rewards, alpha=0.2, color=REWARD_COLOR)
-
-    for rewards in multiple_rewards:
-        mean_rewards, std_rewards, x = smoothing_mean_std(rewards, step_size=10)
-        ax1.plot(x, mean_rewards, color=REWARD_COLOR)
-        ax1.fill_between(x, mean_rewards + std_rewards, mean_rewards - std_rewards, alpha=0.2, color=REWARD_COLOR)
-    
-    plt.savefig(os.path.join(path, "multiple_rewards.png"))
 
 
 def plot_rewards_and_entropy(rewards, entropy, path):
@@ -135,6 +126,38 @@ def plot_rewards_and_passengers(rewards, n_passenger, path):
 
     fig.tight_layout()
     plt.savefig(os.path.join(path, "rewards_passengers.png"))
+
+
+def plot_multiple_agents(data, description, path, sum=True):
+
+    if description == "rewards": 
+        color = REWARD_COLOR
+    elif description == "passengers": 
+        color = PASSENGER_COLOR 
+    else: 
+        color = STANDARD_COLOR
+
+    fig, ax1 = plt.subplots()
+    ax1.set_xlabel("Episodes")
+    ax1.set_ylabel(description)
+
+    if sum:
+        np_arr = [np.array([tmp]) for tmp in data]
+        summed = np.sum(np_arr, axis=0)
+
+        total_color = adjust_lightness(color, 0.5)
+
+        mean_rewards, std_rewards, x = smoothing_mean_std(summed.T, step_size=10)
+        ax1.plot(x, mean_rewards, color=total_color, label="Total")
+        ax1.fill_between(x, mean_rewards + std_rewards, mean_rewards - std_rewards, alpha=0.2, color=total_color)
+
+    for i, rewards in enumerate(data):
+        mean_rewards, std_rewards, x = smoothing_mean_std(rewards, step_size=10)
+        ax1.plot(x, mean_rewards, color=color, label=("Agent " + str(i)))
+        ax1.fill_between(x, mean_rewards + std_rewards, mean_rewards - std_rewards, alpha=0.2, color=color)
+    
+    plt.legend(loc="best")
+    plt.savefig(os.path.join(path, "multiple_" + str(description) + ".png"))
 
 
 def plot_rewards_and_illegal_actions(rewards, illegal_drop_offs, illegal_moves, path):

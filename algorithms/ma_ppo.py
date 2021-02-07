@@ -2,9 +2,6 @@ import os
 import time
 import numpy as np
 
-from pyvirtualdisplay import Display
-Display().start()
-
 import gym
 import gym_cabworld
 
@@ -16,7 +13,9 @@ from common.logging import MultiTracker
 
 def train_ma_ppo(n_episodes):
 
+    from pyvirtualdisplay import Display
     Display().start()
+    
     env_name = "Cabworld-v1"
     env = gym.make(env_name)
 

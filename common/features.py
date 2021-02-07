@@ -14,6 +14,11 @@ def cut_off_state(state, n):
     return tuple(state)
 
 
+def passenger_potential(state, next_state):
+    # increased potential for pick up or drop off
+    potential = 1 if state[4] != next_state[4] else 0 
+    return potential
+
 def calc_add_signal(state):
 
     # calc distance cab to nearest passenger
@@ -22,11 +27,11 @@ def calc_add_signal(state):
     distance = math.sqrt((x_delta)**2 + (y_delta)**2) / math.sqrt(2)
     return 1 - distance
 
-
 def calc_potential(state, next_state, gamma): 
-    
+
     pot_state = calc_add_signal(state)
     pot_next_state = calc_add_signal(next_state)
 
-    potential = gamma * pot_next_state - pot_state
-    return potential 
+    state_potential =  gamma * pot_next_state - pot_state
+
+    return state_potential * 10

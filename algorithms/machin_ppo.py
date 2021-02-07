@@ -58,7 +58,6 @@ class Critic(nn.Module):
 def train_machin_ppo(max_episodes):
 
     from pyvirtualdisplay import Display
-
     Display().start()
 
     log_path = create_log_folder("machin-ppo")

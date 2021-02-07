@@ -30,8 +30,14 @@ class MAActorCritic(nn.Module):
         super(MAActorCritic, self).__init__()
 
         self.n_agents = n_agents
+
         self.actors = []
-        self.actors_optimizers = []
+        self.critics = []
+        self.optimizers = []
+
+        self.lr = 0.001
+        self.betas = (0.9, 0.999)
+
         for _ in range(n_agents):
             actor = nn.Sequential(
                     nn.Linear(n_state, 32),
@@ -41,17 +47,23 @@ class MAActorCritic(nn.Module):
                     nn.Linear(32, n_actions),
                     nn.Softmax(dim=-1),
                     )
-
+        
             self.actors.append(actor)
-            self.actors_optimizers.append(actor.parameters())
 
-        self.critic = nn.Sequential(
-            nn.Linear(n_state, 32),
-            nn.Tanh(),
-            nn.Linear(32, 32),
-            nn.Tanh(),
-            nn.Linear(32, 1),
-        )
+            critic = nn.Sequential(
+                nn.Linear(n_state, 32),
+                nn.Tanh(),
+                nn.Linear(32, 32),
+                nn.Tanh(),
+                nn.Linear(32, 1),
+            )
+            self.critics.append(critic)
+
+            # Create common optimizer for actor-critic pair
+            params = list(actor.parameters()) + list(critic.parameters())
+            optimizer = torch.optim.Adam(params, lr=self.lr, betas=self.betas)
+            self.optimizers.append(optimizer)
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def act(self, states, memory):
@@ -82,7 +94,7 @@ class MAActorCritic(nn.Module):
             dist.log_prob(action) for dist, action in zip(dists, actions)
         ]
         dist_entropys = [dist.entropy() for dist in dists]
-        state_values = [self.critic(state) for state in states]
+        state_values = [self.critics[i](s) for i, s in enumerate(states)]
         
         state_values = [torch.squeeze(state_values[i]) for i in range(self.n_agents)]
 
@@ -102,9 +114,9 @@ class MAPPO:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.policy = MAActorCritic(self.n_agents, n_state, n_actions).to(self.device)
-        self.optimizer = torch.optim.Adam(
-            self.policy.critic.parameters(), lr=self.lr, betas=self.betas
-        )
+        # self.optimizer = torch.optim.Adam(
+        #     self.policy.critic.parameters(), lr=self.lr, betas=self.betas
+        # )
         self.policy_old = MAActorCritic(self.n_agents, n_state, n_actions).to(
             self.device
         )
@@ -165,12 +177,17 @@ class MAPPO:
                     surr1s, surr2s, state_values, rewards, dist_entropys
                 )
             ]
-            self.optimizer.zero_grad()
-            for loss in losses:
+            for loss, opt in zip(losses, self.policy.optimizers): 
+                opt.zero_grad()
                 loss.mean().backward()
-            self.optimizer.step()
+                opt.step()
 
-        self.policy_old.load_state_dict(self.policy.state_dict())
+        # self.policy_old.load_state_dict(self.policy.state_dict())
+        
+        for i in range(self.n_agents): 
+            self.policy_old.actors[i].load_state_dict(self.policy_old.actors[i].state_dict())
+            self.policy_old.critics[i].load_state_dict(self.policy_old.critics[i].state_dict())
+
         mean_entropy = torch.mean(sum(dist_entropys)).item()
         return mean_entropy
 

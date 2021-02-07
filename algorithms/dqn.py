@@ -4,9 +4,6 @@ import numpy as np
 
 from collections import deque
 
-from pyvirtualdisplay import Display
-Display().start()
-
 import gym
 import gym_cabworld
 
@@ -15,15 +12,22 @@ from common.features import clip_state, cut_off_state
 from common.logging import create_log_folder, get_last_folder
 from common.logging import Tracker
 
+from common.features import calc_potential
+
+n_states = 14
+n_actions = 6
+n_hidden = 16
+
+# Fill buffer
+episodes_without_training = 50
 
 def train_dqn(n_episodes, munchhausen=False):
 
+    from pyvirtualdisplay import Display
+    Display().start()
+
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
-
-    n_states = 14
-    n_actions = 6
-    n_hidden = 16
 
     lr = 0.01
     gamma = 0.99
@@ -38,7 +42,7 @@ def train_dqn(n_episodes, munchhausen=False):
     dqn = DQN(n_states, n_actions, n_hidden, lr)
     memory = deque(maxlen=50000)
 
-    for episode in range(n_episodes):
+    for episode in range(n_episodes + episodes_without_training):
 
         tracker.new_episode()
 
@@ -62,13 +66,16 @@ def train_dqn(n_episodes, munchhausen=False):
             # next_state = cut_off_state(next_state, n_state)
 
             tracker.track_reward(reward)
+
+            reward += calc_potential(state, next_state, gamma)
+
             memory.append((state, action, next_state, reward, is_done))
 
             if munchhausen:
-                if episode > 50 and steps % 10 == 0:
+                if episode > episodes_without_training and steps % 10 == 0:
                     dqn.replay_munchhausen(memory, replay_size * 10, gamma)
             else: 
-                if episode > 50 and steps % 100 == 0:
+                if episode > episodes_without_training and steps % 100 == 0:
                     dqn.replay(memory, replay_size, gamma)
 
             if is_done:
@@ -77,7 +84,8 @@ def train_dqn(n_episodes, munchhausen=False):
                 )
                 break
             state = next_state
-        epsilon = max(epsilon * epsilon_decay, 0.01)
+        if episode > episodes_without_training:
+            epsilon = max(epsilon * epsilon_decay, 0.01)
 
     dqn.save_model(log_path)
     tracker.plot(log_path)
@@ -87,9 +95,6 @@ def deploy_dqn(n_episodes, wait):
 
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
-
-    n_states = 14
-    n_actions = 6
     dqn = DQN(n_states, n_actions)
 
     current_folder = get_last_folder("dqn")

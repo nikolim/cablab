@@ -40,7 +40,6 @@ class QNet(nn.Module):
 def train_machin_dqn(n_episodes):
 
     from pyvirtualdisplay import Display
-
     Display().start()
 
     q_net = QNet(observe_dim, action_num)
