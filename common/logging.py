@@ -1,5 +1,7 @@
 import os
+import math
 import numpy as np
+from numpy.testing._private.utils import assert_array_almost_equal_nulp
 
 from common.plotting import *
 
@@ -58,6 +60,7 @@ class Tracker:
         self.drop_off_pick_up_steps = []
         self.passenger_steps = 0
         self.no_passenger_steps = 0
+        self.opt_passenger = 0
 
     def new_episode(self):
 
@@ -77,7 +80,7 @@ class Tracker:
         self.init_episode_vars()
         self.eps_counter += 1
 
-    def track_reward(self, reward):
+    def track_reward(self, reward, action, state, next_state):
         if reward == -5:
             self.illegal_moves_ep += 1
         if reward == -10:
@@ -100,9 +103,20 @@ class Tracker:
         else:
             self.no_passenger_steps += 1
 
+        if action == 4 and reward == 100: 
+            idx = self.get_index_of_passenger(state)
+            if idx == 0: 
+                self.opt_passenger += 1
+
+        if action == 5 and reward == 100: 
+            self.save_dest_to_passengers(next_state)
+
     def get_pick_ups(self):
         return self.pick_ups // 2
 
+    def get_opt_pick_ups(self): 
+        return self.opt_passenger
+        
     def plot(self, log_path):
         plot_rewards(self.rewards, log_path)
         plot_rewards_and_passengers(self.rewards, self.n_passengers, log_path)
@@ -112,6 +126,32 @@ class Tracker:
         plot_mean_pick_up_drop_offs(
             self.mean_pick_up_path, self.mean_drop_off_path, log_path
         )
+
+    def calc_distance(self, pos1, pos2): 
+        return round(math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2),3)
+
+    def save_dest_to_passengers(self, state): 
+
+        self.dest_passengers = []        
+        self.dest_passengers.append(self.calc_distance((state[5],state[6]), (state[7],state[8])))
+        self.dest_passengers.append(self.calc_distance((state[5],state[6]), (state[9],state[10])))
+        self.dest_passengers.append(self.calc_distance((state[5],state[6]), (state[11],state[12])))
+
+    def get_index_of_passenger(self, state):
+
+        if state[5] == state[7] and state[6] == state[8]: 
+            idx = 0
+        elif state[5] == state[9] and state[6] == state[10]:
+            idx = 1
+        elif state[5] == state[11] and state[6] == state[12]:
+            idx = 2
+        else: 
+            raise UserWarning
+
+        travelled_distance = self.dest_passengers[idx]
+        self.dest_passengers.sort()
+        travalled_idx = self.dest_passengers.index(travelled_distance)
+        return travalled_idx
 
 
 class MultiTracker(Tracker): 
@@ -193,7 +233,12 @@ class MultiTracker(Tracker):
     def get_pick_ups(self):
         return [picks // 2 for picks in self.pick_ups]
 
+
     def plot(self, log_path):
         plot_multiple_agents(self.rewards, "rewards",log_path)
         plot_multiple_agents(self.n_passengers, "passengers",log_path)
         # plot_multiple_agents(self.mean_pick_up_path, "steps",log_path, sum=False)
+
+
+
+

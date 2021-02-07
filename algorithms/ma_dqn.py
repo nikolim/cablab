@@ -13,6 +13,8 @@ from common.features import clip_state, cut_off_state
 from common.logging import create_log_folder, get_last_folder
 from common.logging import MultiTracker
 
+# Fill buffer
+episodes_without_training = 50
 
 def train_ma_dqn(n_episodes, munchhausen=False):
 
@@ -22,7 +24,7 @@ def train_ma_dqn(n_episodes, munchhausen=False):
 
     n_agents = 2
     n_states = 14
-    n_actions = 7
+    n_actions = 6
     n_hidden = 16
 
     lr = 0.01
@@ -83,10 +85,14 @@ def train_ma_dqn(n_episodes, munchhausen=False):
             for i in range(n_agents):
                 memorys[i].append((states[i], actions[i], next_states[i], rewards[i], is_done))
 
-            if episode > 50 and steps % 100 == 0:
                 for i in range(n_agents):
-                    dqn_models[i].replay(memorys[i], replay_size, gamma)
-                    # dqn_models[i].replay_munchhausen(memorys[i], replay_size, gamma)
+                    if munchhausen:
+                        if episode > episodes_without_training and steps % 10 == 0:
+                            dqn_models[i].replay_munchhausen(memorys[i], replay_size, gamma)
+                    else:
+                        if episode > episodes_without_training and steps % 10 == 0:
+                            dqn_models[i].replay(memorys[i], replay_size, gamma)
+                     
 
             if is_done:
                 print(
@@ -94,7 +100,8 @@ def train_ma_dqn(n_episodes, munchhausen=False):
                 )
                 break
             states = next_states
-        epsilon = max(epsilon * epsilon_decay, 0.01)
+        if episode > episodes_without_training:
+            epsilon = max(epsilon * epsilon_decay, 0.01)
 
     for i in range(n_agents):
         dqn_models[i].save_model(log_path, number=str(i+1))

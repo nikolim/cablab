@@ -14,9 +14,9 @@ from common.logging import Tracker
 
 from common.features import calc_potential
 
-n_states = 14
+n_states = 13
 n_actions = 6
-n_hidden = 16
+n_hidden = 32
 
 # Fill buffer
 episodes_without_training = 50
@@ -53,8 +53,13 @@ def train_dqn(n_episodes, munchhausen=False):
         state = env.reset()
         # state = clip_state(state, n_clip)
         # state = cut_off_state(state, n_state)
+
+        tracker.save_dest_to_passengers(state)
+
         is_done = False
         steps = 0
+
+        action = 0
 
         while not is_done:
 
@@ -65,9 +70,9 @@ def train_dqn(n_episodes, munchhausen=False):
             # next_state = clip_state(next_state, n_clip)
             # next_state = cut_off_state(next_state, n_state)
 
-            tracker.track_reward(reward)
+            tracker.track_reward(reward, action, state, next_state)
 
-            reward += calc_potential(state, next_state, gamma)
+            reward += calc_potential(state, state, gamma)
 
             memory.append((state, action, next_state, reward, is_done))
 
@@ -80,7 +85,7 @@ def train_dqn(n_episodes, munchhausen=False):
 
             if is_done:
                 print(
-                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
+                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()} Opt: {tracker.get_opt_pick_ups()}"
                 )
                 break
             state = next_state
