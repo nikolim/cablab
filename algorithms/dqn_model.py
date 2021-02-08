@@ -27,7 +27,7 @@ class DQN:
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
         self.losses = []
-
+        
         # needed for munchhausen
         self.entropy_tau = 0.03
         self.alpha = 0.9
@@ -51,6 +51,26 @@ class DQN:
 
         return states, actions, rewards, next_states, dones
 
+    def replay(self, memory, replay_size, gamma):
+
+        self.optimizer.zero_grad()
+
+        states, actions, rewards, next_states, dones = self.sample(
+            memory, replay_size)
+
+        q_values = self.model(states)
+        q_values_next = self.model_target(next_states).detach()
+        q_values_pred = q_values.gather(1, actions)
+
+        q_targets_done = dones.view(-1,1) * rewards
+        q_targets_not_done = (1 - dones) * (rewards + gamma * q_values_next.max(1)[0].unsqueeze(-1))
+
+        q_targets = q_targets_done + q_targets_not_done
+
+        loss = mse_loss(q_values_pred, q_targets)
+        loss.backward()
+        self.optimizer.step()
+
     def replay_munchhausen(self, memory, replay_size, gamma):
 
         self.optimizer.zero_grad()
@@ -59,6 +79,7 @@ class DQN:
             memory, replay_size)
 
         q_values_next = self.model_target(next_states).detach()
+
         logsum = torch.logsumexp((q_values_next - q_values_next.max(1)
                                   [0].unsqueeze(-1)) / self.entropy_tau, 1).unsqueeze(-1)
         tau_log_next = (q_values_next - q_values_next.max(1)
@@ -75,19 +96,12 @@ class DQN:
         munchausen_addon = log_pi.gather(1, actions)
         munchausen_reward = rewards + self.alpha * \
             torch.clamp(munchausen_addon, min=-1, max=0)
+            
         q_targets = munchausen_reward + q_target
 
         q_k = self.model(states)
         Q_expected = q_k.gather(1, actions)
         loss = mse_loss(Q_expected, q_targets)
-        loss.backward()
-        self.optimizer.step()
-
-    def update(self, s, y):
-        y_pred = self.model(torch.Tensor(s))
-        loss = self.criterion(y_pred, Variable(torch.Tensor(y)))
-        self.losses.append(loss.item())
-        self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
@@ -98,25 +112,6 @@ class DQN:
     def target_predict(self, s):
         with torch.no_grad():
             return self.model_target(torch.Tensor(s))
-
-    def replay(self, memory, replay_size, gamma):
-        if len(memory) < replay_size:
-            return
-
-        replay_data = random.sample(memory, replay_size)
-        states = []
-        td_targets = []
-        for state, action, next_state, reward, is_done in replay_data:
-            states.append(state)
-            q_values = self.predict(state).tolist()
-            if is_done:
-                q_values[action] = reward
-            else:
-                q_values_next = self.target_predict(next_state).detach()
-                q_values[action] = reward + gamma * \
-                    torch.max(q_values_next).item()
-            td_targets.append(q_values)
-        self.update(states, td_targets)
 
     def copy_target(self):
         self.model_target.load_state_dict(self.model.state_dict())

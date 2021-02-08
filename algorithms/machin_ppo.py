@@ -12,7 +12,7 @@ from common.logging import create_log_folder
 
 # configurations
 env = gym.make("Cabworld-v0")
-observe_dim = 14
+observe_dim = 13
 action_num = 6
 max_episodes = 500
 max_steps = 1000
@@ -70,6 +70,7 @@ def train_machin_ppo(max_episodes):
 
     episode, step = 0, 0
     total_reward = 0
+
 
     while episode < max_episodes:
 

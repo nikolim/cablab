@@ -1,5 +1,6 @@
 import os
 import math
+from matplotlib.pyplot import plot
 import numpy as np
 from numpy.testing._private.utils import assert_array_almost_equal_nulp
 
@@ -45,6 +46,7 @@ class Tracker:
         self.rewards = []
         self.mean_pick_up_path = []
         self.mean_drop_off_path = []
+        self.opt_pick_ups = []
         self.total_number_passenger = 0
         self.eps_counter = 0
         self.init_episode_vars()
@@ -76,6 +78,7 @@ class Tracker:
                 self.mean_drop_off_path.append(
                     (np.array(self.pick_up_drop_off_steps).mean())
                 )
+            self.opt_pick_ups.append(self.get_opt_pick_ups())
 
         self.init_episode_vars()
         self.eps_counter += 1
@@ -115,7 +118,11 @@ class Tracker:
         return self.pick_ups // 2
 
     def get_opt_pick_ups(self): 
-        return self.opt_passenger
+        if self.get_pick_ups() == 0: 
+            return 0
+        percent_opt_passenger = round((self.opt_passenger/ self.get_pick_ups()),3)
+        # can be greater than 1 if more pick-ups than drop offs
+        return min(percent_opt_passenger, 1) 
         
     def plot(self, log_path):
         plot_rewards(self.rewards, log_path)
@@ -126,6 +133,7 @@ class Tracker:
         plot_mean_pick_up_drop_offs(
             self.mean_pick_up_path, self.mean_drop_off_path, log_path
         )
+        plot_opt_pick_ups(self.opt_pick_ups, log_path)
 
     def calc_distance(self, pos1, pos2): 
         return round(math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2),3)
@@ -146,7 +154,7 @@ class Tracker:
         elif state[5] == state[11] and state[6] == state[12]:
             idx = 2
         else: 
-            raise UserWarning
+            raise IndexError
 
         travelled_distance = self.dest_passengers[idx]
         self.dest_passengers.sort()

@@ -17,6 +17,7 @@ ILLEGAL_PICK_UP_COLOR = "sandybrown"
 DO_NOTHING_COLOR = "salmon"
 STEPS_BETWEEN_PASSENGERS = "peru"
 STANDARD_COLOR = "blue"
+OPT_PICK_UP_COLOR = "olive"
 
 # Seaborn backend
 sns.set()
@@ -57,6 +58,16 @@ def plot_rewards(rewards, path):
     ax1.plot(x, mean_rewards, color=REWARD_COLOR)
     ax1.fill_between(x, mean_rewards + std_rewards, mean_rewards - std_rewards, alpha=0.2, color=REWARD_COLOR)
     plt.savefig(os.path.join(path, "rewards.png"))
+
+def plot_opt_pick_ups(opt_pick_ups, path):
+
+    mean_opt_pick_ups, std_opt_pick_ups, x = smoothing_mean_std(opt_pick_ups, step_size=10)
+    fig, ax1 = plt.subplots()
+    ax1.set_xlabel("Episodes")
+    ax1.set_ylabel("Optimal Pick-up")
+    ax1.plot(x, mean_opt_pick_ups, color=OPT_PICK_UP_COLOR)
+    ax1.fill_between(x, mean_opt_pick_ups + std_opt_pick_ups, mean_opt_pick_ups - std_opt_pick_ups, alpha=0.2, color=OPT_PICK_UP_COLOR)
+    plt.savefig(os.path.join(path, "opt_pick_ups.png"))
 
 
 def plot_rewards_and_entropy(rewards, entropy, path):

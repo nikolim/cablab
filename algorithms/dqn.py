@@ -16,7 +16,7 @@ from common.features import calc_potential
 
 n_states = 13
 n_actions = 6
-n_hidden = 32
+n_hidden = 16
 
 # Fill buffer
 episodes_without_training = 50
@@ -33,7 +33,7 @@ def train_dqn(n_episodes, munchhausen=False):
     gamma = 0.99
     epsilon = 1
     epsilon_decay = 0.99
-    replay_size = 100
+    replay_size = 1000
     target_update = 5
 
     log_path = create_log_folder("dqn")
@@ -76,11 +76,10 @@ def train_dqn(n_episodes, munchhausen=False):
 
             memory.append((state, action, next_state, reward, is_done))
 
-            if munchhausen:
-                if episode > episodes_without_training and steps % 10 == 0:
-                    dqn.replay_munchhausen(memory, replay_size * 10, gamma)
-            else: 
-                if episode > episodes_without_training and steps % 100 == 0:
+            if episode > episodes_without_training and steps % 10 == 0:
+                if munchhausen:
+                    dqn.replay_munchhausen(memory, replay_size, gamma)
+                else: 
                     dqn.replay(memory, replay_size, gamma)
 
             if is_done:
