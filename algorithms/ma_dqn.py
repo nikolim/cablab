@@ -16,15 +16,19 @@ from common.logging import MultiTracker
 # Fill buffer
 episodes_without_training = 50
 
+# Remove for deployment
+Display().start()
+
+
 def train_ma_dqn(n_episodes, munchhausen=False):
 
-    Display().start()
+    # Display().start()
     env_name = "Cabworld-v1"
     env = gym.make(env_name)
 
     n_agents = 2
-    n_states = 14
-    n_actions = 6
+    n_states = 9
+    n_actions = 7
     n_hidden = 16
 
     lr = 0.01
@@ -81,9 +85,12 @@ def train_ma_dqn(n_episodes, munchhausen=False):
             # next_state = cut_off_state(next_state, n_state)
 
             tracker.track_reward(rewards)
+            tracker.track_actions(actions)
 
             for i in range(n_agents):
-                memorys[i].append((states[i], actions[i], next_states[i], rewards[i], is_done))
+
+                reward = 1000 if rewards[i] == 100 else rewards[i]
+                memorys[i].append((states[i], actions[i], next_states[i], reward, is_done))
 
                 for i in range(n_agents):
                     if munchhausen:
@@ -96,7 +103,7 @@ def train_ma_dqn(n_episodes, munchhausen=False):
 
             if is_done:
                 print(
-                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
+                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()} Do-nothing {tracker.do_nothing}"
                 )
                 break
             states = next_states

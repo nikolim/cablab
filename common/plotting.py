@@ -139,6 +139,33 @@ def plot_rewards_and_passengers(rewards, n_passenger, path):
     plt.savefig(os.path.join(path, "rewards_passengers.png"))
 
 
+def plot_do_nothing(do_nothing, do_nothing_opt, do_nothing_sub, path):
+
+    mean_do, std_do, x = smoothing_mean_std(do_nothing, step_size=10)
+    mean_opt, std_opt, x = smoothing_mean_std(do_nothing_opt, step_size=10)
+    mean_sub, std_sub, x = smoothing_mean_std(do_nothing_sub, step_size=10)
+
+    fig, ax1 = plt.subplots()
+    ax1.tick_params(axis="y")
+
+    ax1.set_xlabel("Episodes")
+    ax1.set_ylabel("Do nothing")
+
+    ax1.plot(x, mean_do, color=ENTROPY_COLOR, label="Do nothing")
+    ax1.fill_between(x, mean_do + std_do, mean_do - std_do, alpha=0.2, color=ENTROPY_COLOR)
+
+    ax1.plot(x, mean_opt, color=EPSILON_COLOR, label="Optimal")
+    ax1.fill_between(x, mean_opt + std_opt, mean_opt - std_opt, alpha=0.2, color=EPSILON_COLOR)
+
+    ax1.plot(x, mean_sub, color=ILLEGAL_MOVE_COLOR, label="Suboptimal")
+    ax1.fill_between(x, mean_sub + std_sub, mean_sub - std_sub, alpha=0.2, color=ILLEGAL_MOVE_COLOR)
+
+    plt.legend(loc="best")
+    fig.tight_layout()
+    plt.savefig(os.path.join(path, "do_nothing_steps.png"))
+
+
+
 def plot_multiple_agents(data, description, path, sum=True):
 
     if description == "rewards": 

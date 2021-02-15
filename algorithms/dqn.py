@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 import numpy as np
 
 from collections import deque
@@ -14,12 +15,13 @@ from common.logging import Tracker
 
 from common.features import calc_potential
 
-n_states = 13
-n_actions = 6
+
+n_states = 9
+n_actions = 7
 n_hidden = 16
 
 # Fill buffer
-episodes_without_training = 50
+episodes_without_training = 100
 
 def train_dqn(n_episodes, munchhausen=False):
 
@@ -33,14 +35,14 @@ def train_dqn(n_episodes, munchhausen=False):
     gamma = 0.99
     epsilon = 1
     epsilon_decay = 0.99
-    replay_size = 1000
+    replay_size = 100
     target_update = 5
 
     log_path = create_log_folder("dqn")
     tracker = Tracker()
 
     dqn = DQN(n_states, n_actions, n_hidden, lr)
-    memory = deque(maxlen=50000)
+    memory = deque(maxlen=episodes_without_training * 1000)
 
     for episode in range(n_episodes + episodes_without_training):
 
@@ -54,7 +56,7 @@ def train_dqn(n_episodes, munchhausen=False):
         # state = clip_state(state, n_clip)
         # state = cut_off_state(state, n_state)
 
-        tracker.save_dest_to_passengers(state)
+        # tracker.save_dest_to_passengers(state)
 
         is_done = False
         steps = 0
@@ -66,17 +68,19 @@ def train_dqn(n_episodes, munchhausen=False):
             steps += 1
             action = policy(state)
 
+            tracker.track_actions(state, action)
+
             next_state, reward, is_done, _ = env.step(action)
             # next_state = clip_state(next_state, n_clip)
             # next_state = cut_off_state(next_state, n_state)
 
             tracker.track_reward(reward, action, state, next_state)
 
-            reward += calc_potential(state, state, gamma)
+            # reward += calc_potential(state, state, gamma)
 
             memory.append((state, action, next_state, reward, is_done))
 
-            if episode > episodes_without_training and steps % 10 == 0:
+            if episode > episodes_without_training and steps % 50 == 0:
                 if munchhausen:
                     dqn.replay_munchhausen(memory, replay_size, gamma)
                 else: 
