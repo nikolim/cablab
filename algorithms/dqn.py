@@ -18,7 +18,7 @@ from common.features import calc_potential
 
 n_states = 9
 n_actions = 7
-n_hidden = 16
+n_hidden = 32
 
 # Fill buffer
 episodes_without_training = 100
@@ -31,10 +31,10 @@ def train_dqn(n_episodes, munchhausen=False):
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    lr = 0.01
+    lr = 0.001
     gamma = 0.99
     epsilon = 1
-    epsilon_decay = 0.99
+    epsilon_decay = 0.9975
     replay_size = 100
     target_update = 5
 
@@ -80,7 +80,7 @@ def train_dqn(n_episodes, munchhausen=False):
 
             memory.append((state, action, next_state, reward, is_done))
 
-            if episode > episodes_without_training and steps % 50 == 0:
+            if episode > episodes_without_training and steps % 10 == 0:
                 if munchhausen:
                     dqn.replay_munchhausen(memory, replay_size, gamma)
                 else: 
@@ -90,6 +90,10 @@ def train_dqn(n_episodes, munchhausen=False):
                 print(
                     f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()} Opt: {tracker.get_opt_pick_ups()}"
                 )
+                if tracker.get_pick_ups() < 1:
+                    for _ in range(1000):
+                        memory.pop()
+
                 break
             state = next_state
         if episode > episodes_without_training:

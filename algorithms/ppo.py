@@ -19,7 +19,7 @@ def train_ppo(n_episodes):
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    n_states = 13
+    n_states = 9
     n_actions = 6
     max_timesteps = 1000
 
@@ -36,7 +36,7 @@ def train_ppo(n_episodes):
         # state = clip_state(state, n_clip)
         # state = cut_off_state(state, n_state)
 
-        tracker.save_dest_to_passengers(state)
+        # tracker.save_dest_to_passengers(state)
 
         for _ in range(max_timesteps):
 

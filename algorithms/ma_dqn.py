@@ -26,7 +26,7 @@ def train_ma_dqn(n_episodes, munchhausen=False):
     env_name = "Cabworld-v1"
     env = gym.make(env_name)
 
-    n_agents = 2
+    n_agents = 3
     n_states = 9
     n_actions = 7
     n_hidden = 16
@@ -39,7 +39,7 @@ def train_ma_dqn(n_episodes, munchhausen=False):
     target_update = 5
 
     log_path = create_log_folder("ma-dqn")
-    tracker = MultiTracker(n_agents=2)
+    tracker = MultiTracker(n_agents=n_agents)
 
     dqn_models = []
     memorys = []
@@ -120,7 +120,7 @@ def deploy_ma_dqn(n_episodes, wait):
     env_name = "Cabworld-v1"
     env = gym.make(env_name)
 
-    n_agents = 2
+    n_agents = 3
     n_states = 14
     n_actions = 7
 
