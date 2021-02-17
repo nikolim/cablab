@@ -3,7 +3,6 @@ import math
 import logging
 from matplotlib.pyplot import plot
 import numpy as np
-from numpy.testing._private.utils import assert_array_almost_equal_nulp
 
 from common.plotting import *
 
@@ -29,7 +28,9 @@ def create_log_folder(algorithm):
     open(file_name, "w+")
     logging.basicConfig(format = LOG_FORMAT, datefmt = DATE_FORMAT, level=logging.INFO,
                         filename=file_name)
-    logging.info("Test")
+
+    logger = logging.getLogger("cablab")
+
     return log_path
 
 

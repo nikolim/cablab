@@ -26,13 +26,13 @@ episodes_without_training = 100
 def train_dqn(n_episodes, munchhausen=False):
 
     from pyvirtualdisplay import Display
-    Display().start()
+    # Display().start()
 
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
     lr = 0.001
-    gamma = 0.99
+    gamma = 0.975
     epsilon = 1
     epsilon_decay = 0.9975
     replay_size = 100
@@ -107,7 +107,7 @@ def deploy_dqn(n_episodes, wait):
 
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
-    dqn = DQN(n_states, n_actions)
+    dqn = DQN(n_states, n_actions, n_hidden)
 
     current_folder = get_last_folder("dqn")
     if not current_folder:

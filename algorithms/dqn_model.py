@@ -127,9 +127,12 @@ class DQN:
         print(f"Model loaded {path}")
 
     def deploy(self, s):
-        with torch.no_grad():
-            q_values = self.model(torch.Tensor(s))
-            return (torch.argmax(q_values)).item()
+        if random.random() < 0.05:
+            return random.randint(0, 7 - 1)
+        else:
+            with torch.no_grad():
+                q_values = self.model(torch.Tensor(s))
+                return (torch.argmax(q_values)).item()
 
 
 def gen_epsilon_greedy_policy(estimator, epsilon, n_action):
