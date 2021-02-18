@@ -9,11 +9,9 @@ import gym
 import gym_cabworld
 
 from algorithms.dqn_model import DQN, gen_epsilon_greedy_policy
-from common.features import clip_state, cut_off_state
+
 from common.logging import create_log_folder, get_last_folder
 from common.logging import Tracker
-
-from common.features import calc_potential
 
 
 n_states = 9
@@ -42,6 +40,7 @@ def train_dqn(n_episodes, munchhausen=False):
     tracker = Tracker()
 
     dqn = DQN(n_states, n_actions, n_hidden, lr)
+
     memory = deque(maxlen=episodes_without_training * 1000)
 
     for episode in range(n_episodes + episodes_without_training):

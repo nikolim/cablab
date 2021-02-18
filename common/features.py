@@ -54,14 +54,69 @@ def calc_shorter_way(states):
     return one_hot    
 
 
-def add_msg_to_states(states): 
+# def add_msg_to_states(states): 
+# 
+#     new_states = []
+#     one_hot_msg = calc_shorter_way(states)
+# 
+#     for state, msg in zip(states, one_hot_msg): 
+#         state_arr = list(state)
+#         state_arr.append(msg)
+#         new_states.append(tuple(state_arr))
+# 
+#     return new_states
+ 
+ 
+def send_pos_to_other_cab(states): 
+
+    assert len(states) == 2 
+
+    # passenger is the same for all cabs
+    pass_x, pass_y = states[0][7], states[0][8]
+
+    cab1_pos_x, cab1_pos_y = states[0][5], states[0][6] 
+    cab2_pos_x, cab2_pos_y = states[1][5], states[1][6] 
+    
+    adv1 = [cab1_pos_x, cab1_pos_y, pass_x, pass_y, cab2_pos_x, cab1_pos_y] 
+    adv2 = [cab2_pos_x, cab2_pos_y, pass_x, pass_y, cab1_pos_x, cab1_pos_y]
+
+    return [adv1, adv2]
+
+
+def add_msg_to_states(states, msgs):
 
     new_states = []
-    one_hot_msg = calc_shorter_way(states)
 
-    for state, msg in zip(states, one_hot_msg): 
+    for state, msg in zip(states, msgs[::-1]): 
         state_arr = list(state)
         state_arr.append(msg)
         new_states.append(tuple(state_arr))
 
     return new_states
+
+
+def calc_adv_rewards(adv_inputs, msgs): 
+
+    rewards = []
+
+    for adv_input, msg in zip(adv_inputs, msgs): 
+
+        my_distance = round(math.sqrt((adv_input[0] - adv_input[2]) ** 2 + (adv_input[1] - adv_input[3]) ** 2),2)
+        other_distance = round(math.sqrt((adv_input[2] - adv_input[4]) ** 2 + (adv_input[3] - adv_input[5]) ** 2),2)
+
+        delta = my_distance - other_distance 
+
+        if delta > 0 and msg == 0: 
+            reward = 1 
+        elif delta < 0 and msg == 0: 
+            reward = -1 
+        elif delta > 0 and msg == 1: 
+            reward = -1 
+        elif delta < 0 and msg == 1: 
+            reward = 1
+        else: 
+            reward = 0
+        
+        rewards.append(reward)
+
+    return rewards
