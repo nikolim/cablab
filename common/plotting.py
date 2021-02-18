@@ -59,6 +59,7 @@ def plot_rewards(rewards, path):
     ax1.fill_between(x, mean_rewards + std_rewards, mean_rewards - std_rewards, alpha=0.2, color=REWARD_COLOR)
     plt.savefig(os.path.join(path, "rewards.png"))
 
+
 def plot_opt_pick_ups(opt_pick_ups, path):
 
     mean_opt_pick_ups, std_opt_pick_ups, x = smoothing_mean_std(opt_pick_ups, step_size=10)
@@ -249,3 +250,5 @@ def plot_mean_pick_up_drop_offs(pick_up_mean, drop_off_mean, path):
     # plt.legend(loc='best')
     fig.tight_layout()
     plt.savefig(os.path.join(path, "pick_up_drop_off_path.png"))
+
+

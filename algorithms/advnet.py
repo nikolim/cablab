@@ -11,7 +11,7 @@ torch.manual_seed(0)
 
 
 class AdvNet:
-    def __init__(self, n_input=6, n_msg=2, n_hidden=16, lr=0.01):
+    def __init__(self, n_input=6, n_msg=2, n_hidden=16, lr=0.001):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
             torch.nn.Linear(n_input, n_hidden),
@@ -23,7 +23,7 @@ class AdvNet:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
-        self.losses = []
+
 
     def sample(self, memory, replay_size):
 

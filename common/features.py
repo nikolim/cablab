@@ -108,14 +108,12 @@ def calc_adv_rewards(adv_inputs, msgs):
 
         if delta > 0 and msg == 0: 
             reward = 1 
-        elif delta < 0 and msg == 0: 
+        elif delta <= 0 and msg == 0: 
             reward = -1 
         elif delta > 0 and msg == 1: 
             reward = -1 
-        elif delta < 0 and msg == 1: 
+        elif delta <= 0 and msg == 1: 
             reward = 1
-        else: 
-            reward = 0
         
         rewards.append(reward)
 

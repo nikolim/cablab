@@ -16,7 +16,7 @@ from common.logging import create_log_folder, get_last_folder
 from common.logging import MultiTracker
 
 # Fill buffer
-episodes_without_training = 10
+episodes_without_training = 100
 
 # Remove for deployment
 # Display().start()
@@ -40,7 +40,9 @@ def train_ma_dqn(n_episodes, munchhausen=False):
     lr = 0.001
     gamma = 0.975
     epsilon = 1
-    epsilon_decay = 0.9975
+    # epsilon_decay = 0.9975
+    epsilon_decay = 0.99
+
     replay_size = 100
     target_update = 5
 
@@ -55,8 +57,8 @@ def train_ma_dqn(n_episodes, munchhausen=False):
     for _ in range(n_agents):
         dqn = DQN(n_states, n_actions, n_hidden, lr)
         adv = AdvNet()
-        memory = deque(maxlen=50000)
-        adv_memory = deque(maxlen=5000)
+        memory = deque(maxlen=episodes_without_training * 1000)
+        adv_memory = deque(maxlen=episodes_without_training * 1000)
 
         dqn_models.append(dqn)
         memorys.append(memory)
@@ -111,6 +113,7 @@ def train_ma_dqn(n_episodes, munchhausen=False):
             
             tracker.track_reward(rewards)
             tracker.track_actions(actions)
+            tracker.track_adv_reward(adv_rewards)
 
             # ADV
             adv_inputs_next = send_pos_to_other_cab(next_states)
@@ -129,18 +132,18 @@ def train_ma_dqn(n_episodes, munchhausen=False):
                 for i in range(n_agents):
 
                     if episode > episodes_without_training and steps % 10 == 0:
-                        if munchhausen:
-                            dqn_models[i].replay_munchhausen(
-                                memorys[i], replay_size, gamma)
-                        else:
-                            dqn_models[i].replay(
-                                memorys[i], replay_size, gamma)
+                        # if munchhausen:
+                        #     dqn_models[i].replay_munchhausen(
+                        #         memorys[i], replay_size, gamma)
+                        # else:
+                        #     dqn_models[i].replay(
+                        #         memorys[i], replay_size, gamma)
                         adv_models[i].replay(adv_memorys[i], replay_size)
 
 
             if is_done:
                 print(
-                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()} Do-nothing {tracker.do_nothing}"
+                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()} Do-nothing {tracker.do_nothing} ADV {tracker.episode_adv_reward}"
                 )
                 break
             

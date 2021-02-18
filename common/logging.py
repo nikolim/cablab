@@ -212,6 +212,7 @@ class MultiTracker(Tracker):
         self.epsilon = [[] for _ in range(n_agents)]
         self.n_passengers = [[] for _ in range(n_agents)]
         self.rewards = [[] for _ in range(n_agents)]
+        self.adv_rewards = [[] for _ in range(n_agents)]
         self.mean_pick_up_path = [[] for _ in range(n_agents)]
         self.mean_drop_off_path = [[] for _ in range(n_agents)]
         self.total_number_passenger = [[] for _ in range(n_agents)]
@@ -223,6 +224,7 @@ class MultiTracker(Tracker):
 
         # storage for one episode
         self.episode_reward = [0] * self.n_agents
+        self.episode_adv_reward = [0] * self.n_agents
         self.pick_ups = [0] * self.n_agents
         self.illegal_pick_up_ep = [0] * self.n_agents
         self.illegal_moves_ep = [0] * self.n_agents
@@ -239,6 +241,7 @@ class MultiTracker(Tracker):
         if self.eps_counter > 0:
             for i in range(self.n_agents):
                 self.rewards[i].append(self.episode_reward[i])
+                self.adv_rewards[i].append(self.episode_adv_reward[i])
                 self.illegal_pick_ups[i].append(self.illegal_pick_up_ep[i])
                 self.illegal_moves[i].append(self.illegal_moves_ep[i])
                 self.n_passengers[i].append(self.pick_ups[i] // 2)
@@ -280,6 +283,10 @@ class MultiTracker(Tracker):
             else:
                 self.no_passenger_steps[i] += 1
 
+    def track_adv_reward(self, rewards):        
+        for i in range(len(rewards)):
+            self.episode_adv_reward[i] += rewards[i]
+
     def track_actions(self, actions):
 
         if actions[0] == 6: 
@@ -293,6 +300,7 @@ class MultiTracker(Tracker):
 
 
     def plot(self, log_path):
+        plot_multiple_agents(self.adv_rewards, "adv_rewards",log_path)
         plot_multiple_agents(self.rewards, "rewards",log_path)
         plot_multiple_agents(self.n_passengers, "passengers",log_path)
         # plot_multiple_agents(self.mean_pick_up_path, "steps",log_path, sum=False)
