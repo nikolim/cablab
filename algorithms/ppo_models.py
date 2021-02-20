@@ -80,7 +80,7 @@ class ActorCritic(nn.Module):
 
 class PPO:
     def __init__(self, n_state, n_actions):
-        self.lr = 0.001
+        self.lr = 0.0001
         self.betas = (0.9, 0.999)
         self.gamma = 0.99
         self.eps_clip = 0.2

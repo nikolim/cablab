@@ -27,29 +27,26 @@ https://gitlab.com/nlimbrun/cabworld
 
 ### Single Agent
 
-1. DQN (https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
-2. Munchhausen-DQN (https://arxiv.org/pdf/2007.14430.pdf)
-3. A2C (https://papers.nips.cc/paper/1999/file/6449f44a102fde848669bdd9eb6b76fa-Paper.pdf)
-4. PPO (https://arxiv.org/pdf/1707.06347.pdf)
+* [DQN] (https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
+* [Munchhausen-DQN] (https://arxiv.org/pdf/2007.14430.pdf)
+* [A2C] (https://papers.nips.cc/paper/1999/file/6449f44a102fde848669bdd9eb6b76fa-Paper.pdf)
+* [PPO] (https://arxiv.org/pdf/1707.06347.pdf)
+
 
 ### Multi Agent 
 
-1. MA-DQN (individual)
-2. MA-PPO (individual)
+* MA-DQN (individual)
+* MA-PPO (individual)
 
+#### AdvNet 
 
-## Subtasks​
-
-The cabworld is a relativly complex environment with different subtasks which can be seperated
-
-1. Subtask 1: Learn movements 
-2. Subtask 2: Learn pick-ups 
-3. Subtask 3: Learn to select passengers 
+WIP: Seperate Network to enable agents to communicate
 
 ## Requirements 
 
-- Pytorch 
-- Gym-Cabworld 
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 
@@ -92,6 +89,10 @@ Every traning runs creates the following plots (here for single-agent-DQN)
 
 
 ## Changelog
+
+
+### [0.4] (https://gitlab.com/nlimbrun/cablab/-/tags/release_0.4) (20.02.2021)
+- Added AdvNet, Improved algorithms, extended plotting and logging
 
 ### [0.3] (https://gitlab.com/nlimbrun/cablab/-/tags/release_0.3) (27.01.2021)
 - Added Multi-Agent, Munchhausen-Addon for DQN

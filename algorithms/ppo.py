@@ -2,9 +2,6 @@ import os
 import time
 import numpy as np
 
-from pyvirtualdisplay import Display
-Display().start()
-
 import gym
 import gym_cabworld
 
@@ -16,11 +13,15 @@ from common.logging import Tracker
 
 def train_ppo(n_episodes):
 
+    from pyvirtualdisplay import Display
+
+    Display().start()
+
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    n_states = 14
-    n_actions = 6
+    n_states = env.observation_space.shape[1]
+    n_actions = env.action_space.n 
     max_timesteps = 1000
 
     log_path = create_log_folder("ppo")
@@ -33,16 +34,12 @@ def train_ppo(n_episodes):
 
         tracker.new_episode()
         state = env.reset()
-        # state = clip_state(state, n_clip)
-        # state = cut_off_state(state, n_state)
 
         for _ in range(max_timesteps):
 
             action = ppo.policy_old.act(state, memory)
+            old_state = state
             state, reward, done, _ = env.step(action)
-            # state = clip_state(state, n_clip)
-            # state = cut_off_state(state, n_state)
-
             tracker.track_reward(reward)
 
             memory.rewards.append(reward)
@@ -65,7 +62,10 @@ def deploy_ppo(n_episodes, wait):
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    ppo = PPO(n_state=14, n_actions=6)
+    n_states = env.observation_space.shape[1]
+    n_actions = env.action_space.n
+
+    ppo = PPO(n_state=n_states, n_actions=n_actions)
 
     current_folder = get_last_folder("ppo")
     if not current_folder:

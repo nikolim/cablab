@@ -3,7 +3,6 @@ import argparse
 from algorithms.ppo import deploy_ppo
 from algorithms.dqn import deploy_dqn
 from algorithms.a2c import deploy_a2c
-from algorithms.mdqn import deploy_mdqn
 from algorithms.random_policy import deploy_random
 from algorithms.ma_dqn import deploy_ma_dqn
 
@@ -32,8 +31,6 @@ elif args.algorithm == "dqn":
     deploy_dqn(int(args.number), float(args.wait))
 elif args.algorithm == "a2c":
     deploy_a2c(int(args.number), float(args.wait))
-elif args.algorithm == "mdqn":
-    deploy_mdqn(int(args.number), float(args.wait))
 elif args.algorithm == "rand":
     deploy_random(int(args.number), float(args.wait))
 elif args.algorithm == "ma-dqn":

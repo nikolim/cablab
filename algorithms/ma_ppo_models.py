@@ -30,26 +30,40 @@ class MAActorCritic(nn.Module):
         super(MAActorCritic, self).__init__()
 
         self.n_agents = n_agents
+
         self.actors = []
+        self.critics = []
+        self.optimizers = []
+
+        self.lr = 0.001
+        self.betas = (0.9, 0.999)
+
         for _ in range(n_agents):
-            self.actors.append(
-                nn.Sequential(
-                    nn.Linear(n_state, 32),
-                    nn.Tanh(),
-                    nn.Linear(32, 32),
-                    nn.Tanh(),
-                    nn.Linear(32, n_actions),
-                    nn.Softmax(dim=-1),
-                )
+            actor = nn.Sequential(
+                nn.Linear(n_state, 32),
+                nn.Tanh(),
+                nn.Linear(32, 32),
+                nn.Tanh(),
+                nn.Linear(32, n_actions),
+                nn.Softmax(dim=-1),
             )
 
-        self.critic = nn.Sequential(
-            nn.Linear(n_state, 32),
-            nn.Tanh(),
-            nn.Linear(32, 32),
-            nn.Tanh(),
-            nn.Linear(32, 1),
-        )
+            self.actors.append(actor)
+
+            critic = nn.Sequential(
+                nn.Linear(n_state, 32),
+                nn.Tanh(),
+                nn.Linear(32, 32),
+                nn.Tanh(),
+                nn.Linear(32, 1),
+            )
+            self.critics.append(critic)
+
+            # Create common optimizer for actor-critic pair
+            params = list(actor.parameters()) + list(critic.parameters())
+            optimizer = torch.optim.Adam(params, lr=self.lr, betas=self.betas)
+            self.optimizers.append(optimizer)
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def act(self, states, memory):
@@ -80,8 +94,8 @@ class MAActorCritic(nn.Module):
             dist.log_prob(action) for dist, action in zip(dists, actions)
         ]
         dist_entropys = [dist.entropy() for dist in dists]
-        state_values = [self.critic(state) for state in states]
-        
+        state_values = [self.critics[i](s) for i, s in enumerate(states)]
+
         state_values = [torch.squeeze(state_values[i]) for i in range(self.n_agents)]
 
         return action_logprobs, state_values, dist_entropys
@@ -100,9 +114,9 @@ class MAPPO:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.policy = MAActorCritic(self.n_agents, n_state, n_actions).to(self.device)
-        self.optimizer = torch.optim.Adam(
-            self.policy.parameters(), lr=self.lr, betas=self.betas
-        )
+        # self.optimizer = torch.optim.Adam(
+        #     self.policy.critic.parameters(), lr=self.lr, betas=self.betas
+        # )
         self.policy_old = MAActorCritic(self.n_agents, n_state, n_actions).to(
             self.device
         )
@@ -115,24 +129,44 @@ class MAPPO:
         rewards = []
         discounted_rewards = [0] * self.n_agents
 
-        for rewards_tmp, is_terminal in zip(reversed(memory.rewards), reversed(memory.is_terminal)):
+        for rewards_tmp, is_terminal in zip(
+            reversed(memory.rewards), reversed(memory.is_terminal)
+        ):
             if is_terminal:
                 discounted_rewards = [0] * self.n_agents
-            discounted_rewards = [reward + (self.gamma * discounted_reward) for reward, discounted_reward in zip(rewards_tmp, discounted_rewards)]
+            discounted_rewards = [
+                reward + (self.gamma * discounted_reward)
+                for reward, discounted_reward in zip(rewards_tmp, discounted_rewards)
+            ]
             rewards.insert(0, discounted_rewards)
 
         tmp_rewards = [list(tmp[i] for tmp in rewards) for i in range(self.n_agents)]
 
-        rewards = [torch.tensor(reward, dtype=torch.float32).to(self.device) for reward in tmp_rewards]
-        rewards = [(reward - reward.mean()) / (reward.std() + 1e-5) for reward in rewards]
-        
+        rewards = [
+            torch.tensor(reward, dtype=torch.float32).to(self.device)
+            for reward in tmp_rewards
+        ]
+        rewards = [
+            (reward - reward.mean()) / (reward.std() + 1e-5) for reward in rewards
+        ]
+
         tmp_states = [(tmp[i] for tmp in memory.states) for i in range(self.n_agents)]
         tmp_actions = [(tmp[i] for tmp in memory.actions) for i in range(self.n_agents)]
-        tmp_logprobs = [(tmp[i] for tmp in memory.actions) for i in range(self.n_agents)]
+        tmp_logprobs = [
+            (tmp[i] for tmp in memory.actions) for i in range(self.n_agents)
+        ]
 
-        old_states = [torch.stack(tuple(state)).to(self.device).detach() for state in tmp_states]
-        old_actions = [torch.stack(tuple(action)).to(self.device).detach() for action in tmp_actions]
-        old_logprobs = [torch.stack(tuple(logprob)).to(self.device).detach() for logprob in tmp_logprobs]
+        old_states = [
+            torch.stack(tuple(state)).to(self.device).detach() for state in tmp_states
+        ]
+        old_actions = [
+            torch.stack(tuple(action)).to(self.device).detach()
+            for action in tmp_actions
+        ]
+        old_logprobs = [
+            torch.stack(tuple(logprob)).to(self.device).detach()
+            for logprob in tmp_logprobs
+        ]
 
         for _ in range(self.K_epochs):
             logprobs, state_values, dist_entropys = self.policy.evaluate(
@@ -163,13 +197,21 @@ class MAPPO:
                     surr1s, surr2s, state_values, rewards, dist_entropys
                 )
             ]
-
-            self.optimizer.zero_grad()
-            for loss in losses:
+            for loss, opt in zip(losses, self.policy.optimizers):
+                opt.zero_grad()
                 loss.mean().backward()
-            self.optimizer.step()
+                opt.step()
 
-        self.policy_old.load_state_dict(self.policy.state_dict())
+        # self.policy_old.load_state_dict(self.policy.state_dict())
+
+        for i in range(self.n_agents):
+            self.policy_old.actors[i].load_state_dict(
+                self.policy_old.actors[i].state_dict()
+            )
+            self.policy_old.critics[i].load_state_dict(
+                self.policy_old.critics[i].state_dict()
+            )
+
         mean_entropy = torch.mean(sum(dist_entropys)).item()
         return mean_entropy
 
