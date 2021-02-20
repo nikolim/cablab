@@ -6,7 +6,6 @@ import random
 import copy
 import os
 
-# random.seed(0)
 torch.manual_seed(0)
 
 counter = 0
@@ -24,10 +23,9 @@ class DQN:
         )
         self.model_target = copy.deepcopy(self.model)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.losses = []
-        
+
         # needed for munchhausen
         self.entropy_tau = 0.03
         self.alpha = 0.9
@@ -38,16 +36,33 @@ class DQN:
             return
 
         replay_data = random.sample(memory, replay_size)
-        states = (torch.from_numpy(
-            np.stack([tmp[0] for tmp in replay_data])).float().to(self.device))
-        actions = (torch.from_numpy(
-            np.vstack([tmp[1] for tmp in replay_data])).long().to(self.device))
-        next_states = (torch.from_numpy(
-            np.stack([tmp[2] for tmp in replay_data])).float().to(self.device))
-        rewards = (torch.from_numpy(
-            np.vstack([tmp[3] for tmp in replay_data])).float().to(self.device))
-        dones = (torch.from_numpy(np.vstack([tmp[4] for tmp in replay_data]).astype(
-            np.uint8)).float().to(self.device))
+        states = (
+            torch.from_numpy(np.stack([tmp[0] for tmp in replay_data]))
+            .float()
+            .to(self.device)
+        )
+        actions = (
+            torch.from_numpy(np.vstack([tmp[1] for tmp in replay_data]))
+            .long()
+            .to(self.device)
+        )
+        next_states = (
+            torch.from_numpy(np.stack([tmp[2] for tmp in replay_data]))
+            .float()
+            .to(self.device)
+        )
+        rewards = (
+            torch.from_numpy(np.vstack([tmp[3] for tmp in replay_data]))
+            .float()
+            .to(self.device)
+        )
+        dones = (
+            torch.from_numpy(
+                np.vstack([tmp[4] for tmp in replay_data]).astype(np.uint8)
+            )
+            .float()
+            .to(self.device)
+        )
 
         return states, actions, rewards, next_states, dones
 
@@ -55,15 +70,16 @@ class DQN:
 
         self.optimizer.zero_grad()
 
-        states, actions, rewards, next_states, dones = self.sample(
-            memory, replay_size)
+        states, actions, rewards, next_states, dones = self.sample(memory, replay_size)
 
         q_values = self.model(states)
         q_values_next = self.model_target(next_states).detach()
         q_values_pred = q_values.gather(1, actions)
 
-        q_targets_done = dones.view(-1,1) * rewards
-        q_targets_not_done = (1 - dones) * (rewards + gamma * q_values_next.max(1)[0].unsqueeze(-1))
+        q_targets_done = dones.view(-1, 1) * rewards
+        q_targets_not_done = (1 - dones) * (
+            rewards + gamma * q_values_next.max(1)[0].unsqueeze(-1)
+        )
 
         q_targets = q_targets_done + q_targets_not_done
 
@@ -75,28 +91,35 @@ class DQN:
 
         self.optimizer.zero_grad()
 
-        states, actions, rewards, next_states, dones = self.sample(
-            memory, replay_size)
+        states, actions, rewards, next_states, dones = self.sample(memory, replay_size)
 
         q_values_next = self.model_target(next_states).detach()
 
-        logsum = torch.logsumexp((q_values_next - q_values_next.max(1)
-                                  [0].unsqueeze(-1)) / self.entropy_tau, 1).unsqueeze(-1)
-        tau_log_next = (q_values_next - q_values_next.max(1)
-                        [0].unsqueeze(-1) - self.entropy_tau * logsum)
+        logsum = torch.logsumexp(
+            (q_values_next - q_values_next.max(1)[0].unsqueeze(-1)) / self.entropy_tau,
+            1,
+        ).unsqueeze(-1)
+        tau_log_next = (
+            q_values_next
+            - q_values_next.max(1)[0].unsqueeze(-1)
+            - self.entropy_tau * logsum
+        )
         pi_target = softmax(q_values_next / self.entropy_tau, dim=1)
-        q_target = (gamma * (pi_target * (q_values_next -
-                                          tau_log_next) * (1 - dones)).sum(1)).unsqueeze(-1)
+        q_target = (
+            gamma * (pi_target * (q_values_next - tau_log_next) * (1 - dones)).sum(1)
+        ).unsqueeze(-1)
         q_values = self.model_target(states).detach()
         v_values = q_values.max(1)[0].unsqueeze(-1)
-        logsum = torch.logsumexp(
-            (q_values - v_values) / self.entropy_tau, 1).unsqueeze(-1)
+        logsum = torch.logsumexp((q_values - v_values) / self.entropy_tau, 1).unsqueeze(
+            -1
+        )
         log_pi = q_values - v_values - self.entropy_tau * logsum
 
         munchausen_addon = log_pi.gather(1, actions)
-        munchausen_reward = rewards + self.alpha * \
-            torch.clamp(munchausen_addon, min=-1, max=0)
-            
+        munchausen_reward = rewards + self.alpha * torch.clamp(
+            munchausen_addon, min=-1, max=0
+        )
+
         q_targets = munchausen_reward + q_target
 
         q_k = self.model(states)
@@ -116,8 +139,8 @@ class DQN:
     def copy_target(self):
         self.model_target.load_state_dict(self.model.state_dict())
 
-    def save_model(self, path, number=''):
-        full_path = os.path.join(path, "dqn" + number +".pth")
+    def save_model(self, path, number=""):
+        full_path = os.path.join(path, "dqn" + number + ".pth")
         torch.save(self.model.state_dict(), full_path)
         print(f"Model saved {full_path}")
 
@@ -128,7 +151,7 @@ class DQN:
 
     def deploy(self, s):
         if random.random() < 0.05:
-            return random.randint(0, 7 - 1)
+            return random.randint(0, 6)
         else:
             with torch.no_grad():
                 q_values = self.model(torch.Tensor(s))

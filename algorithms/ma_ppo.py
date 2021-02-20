@@ -1,6 +1,7 @@
 import os
 import time
 import numpy as np
+from pyvirtualdisplay import Display
 
 import gym
 import gym_cabworld
@@ -13,14 +14,14 @@ from common.logging import MultiTracker
 
 def train_ma_ppo(n_episodes):
 
-    from pyvirtualdisplay import Display
-    Display().start()
-    
+    disp = Display()
+    disp.start()
+
     env_name = "Cabworld-v1"
     env = gym.make(env_name)
 
-    n_states = 14
-    n_actions = 6
+    n_states = env.observation_space.shape[1]
+    n_actions = env.action_space.n
     max_timesteps = 1000
 
     log_path = create_log_folder("mappo")
@@ -33,8 +34,6 @@ def train_ma_ppo(n_episodes):
 
         tracker.new_episode()
         states = env.reset()
-        # state = clip_state(state, n_clip)
-        # state = cut_off_state(state, n_state)
 
         total_reward = 0
 
@@ -42,9 +41,6 @@ def train_ma_ppo(n_episodes):
 
             action = mappo.policy_old.act(states, memory)
             states, rewards, done, _ = env.step(action)
-            # state = clip_state(state, n_clip)
-            # state = cut_off_state(state, n_state)
-
             tracker.track_reward(rewards)
 
             total_reward += sum(rewards)
@@ -53,15 +49,15 @@ def train_ma_ppo(n_episodes):
             memory.is_terminal.append(done)
 
             if done:
-                mean_entropy = mappo.update(memory, episode)
+                mappo.update(memory, episode)
                 memory.clear()
                 print(
                     f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
                 )
                 break
 
-    # mappo.save_model(log_path)
     tracker.plot(log_path)
+    mappo.save_model(log_path)
 
 
 def deploy_ma_ppo(n_episodes, wait):
@@ -69,7 +65,10 @@ def deploy_ma_ppo(n_episodes, wait):
     env_name = "Cabworld-v1"
     env = gym.make(env_name)
 
-    ppo = MAPPO(n_state=14, n_actions=6)
+    n_states = env.observation_space.shape[1]
+    n_actions = env.action_space.n
+
+    ppo = MAPPO(n_state=n_states, n_actions=n_actions)
 
     current_folder = get_last_folder("mappo")
     if not current_folder:
@@ -86,7 +85,7 @@ def deploy_ma_ppo(n_episodes, wait):
         while not done:
             action = ppo.policy.deploy(state)
             state, reward, done, _ = env.step(action)
-            episode_reward += reward
+            episode_reward += sum(reward)
             env.render()
             time.sleep(float(wait))
             if done:

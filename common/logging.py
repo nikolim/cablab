@@ -6,8 +6,8 @@ import numpy as np
 
 from common.plotting import *
 
-LOG_FORMAT = '%(asctime)s  %(levelname)s: %(message)s'
-DATE_FORMAT = '%d/%m/%Y %H:%M:%S %p'
+LOG_FORMAT = "%(asctime)s  %(levelname)s: %(message)s"
+DATE_FORMAT = "%d/%m/%Y %H:%M:%S %p"
 
 
 def create_log_folder(algorithm):
@@ -26,8 +26,9 @@ def create_log_folder(algorithm):
     file_name = os.path.join(log_path, str(algorithm) + ".log")
 
     open(file_name, "w+")
-    logging.basicConfig(format = LOG_FORMAT, datefmt = DATE_FORMAT, level=logging.INFO,
-                        filename=file_name)
+    logging.basicConfig(
+        format=LOG_FORMAT, datefmt=DATE_FORMAT, level=logging.INFO, filename=file_name
+    )
 
     logger = logging.getLogger("cablab")
 
@@ -88,8 +89,10 @@ class Tracker:
 
         if self.eps_counter > 0:
 
-            logging.info(f"Episode:{self.eps_counter} Reward: {self.episode_reward} Passengers: {self.pick_ups // 2}")
-            
+            logging.info(
+                f"Episode:{self.eps_counter} Reward: {self.episode_reward} Passengers: {self.pick_ups // 2}"
+            )
+
             self.rewards.append(self.episode_reward)
             self.illegal_pick_ups.append(self.illegal_pick_up_ep)
             self.illegal_moves.append(self.illegal_moves_ep)
@@ -111,7 +114,7 @@ class Tracker:
         self.init_episode_vars()
         self.eps_counter += 1
 
-    def track_reward(self, reward, action, state, next_state):
+    def track_reward(self, reward):
         if reward == -5:
             self.illegal_moves_ep += 1
         if reward == -10:
@@ -134,24 +137,25 @@ class Tracker:
         else:
             self.no_passenger_steps += 1
 
-        #if action == 4 and reward == 100: 
+        # Use to determine optimal passenger if multiple passengers
+        # if action == 4 and reward == 100:
         #    idx = self.get_index_of_passenger(state)
-        #    if idx == 0: 
+        #    if idx == 0:
         #        self.opt_passenger += 1
 
-        #if action == 5 and reward == 100: 
+        # if action == 5 and reward == 100:
         #    self.save_dest_to_passengers(next_state)
 
     def get_pick_ups(self):
         return self.pick_ups // 2
 
-    def get_opt_pick_ups(self): 
-        if self.get_pick_ups() == 0: 
+    def get_opt_pick_ups(self):
+        if self.get_pick_ups() == 0:
             return 0
-        percent_opt_passenger = round((self.opt_passenger/ self.get_pick_ups()),3)
+        percent_opt_passenger = round((self.opt_passenger / self.get_pick_ups()), 3)
         # can be greater than 1 if more pick-ups than drop offs
-        return min(percent_opt_passenger, 1) 
-        
+        return min(percent_opt_passenger, 1)
+
     def plot(self, log_path):
         plot_rewards(self.rewards, log_path)
         plot_rewards_and_passengers(self.rewards, self.n_passengers, log_path)
@@ -163,27 +167,38 @@ class Tracker:
         )
         plot_opt_pick_ups(self.opt_pick_ups, log_path)
 
-        plot_do_nothing(self.do_nothing_arr, self.do_nothing_opt_arr, self.do_nothing_sub_arr, log_path)
+        plot_do_nothing(
+            self.do_nothing_arr,
+            self.do_nothing_opt_arr,
+            self.do_nothing_sub_arr,
+            log_path,
+        )
 
-    def calc_distance(self, pos1, pos2): 
-        return round(math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2),3)
+    def calc_distance(self, pos1, pos2):
+        return round(math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2), 3)
 
-    def save_dest_to_passengers(self, state): 
+    def save_dest_to_passengers(self, state):
 
-        self.dest_passengers = []        
-        self.dest_passengers.append(self.calc_distance((state[5],state[6]), (state[7],state[8])))
-        self.dest_passengers.append(self.calc_distance((state[5],state[6]), (state[9],state[10])))
-        self.dest_passengers.append(self.calc_distance((state[5],state[6]), (state[11],state[12])))
+        self.dest_passengers = []
+        self.dest_passengers.append(
+            self.calc_distance((state[5], state[6]), (state[7], state[8]))
+        )
+        self.dest_passengers.append(
+            self.calc_distance((state[5], state[6]), (state[9], state[10]))
+        )
+        self.dest_passengers.append(
+            self.calc_distance((state[5], state[6]), (state[11], state[12]))
+        )
 
     def get_index_of_passenger(self, state):
 
-        if state[5] == state[7] and state[6] == state[8]: 
+        if state[5] == state[7] and state[6] == state[8]:
             idx = 0
         elif state[5] == state[9] and state[6] == state[10]:
             idx = 1
         elif state[5] == state[11] and state[6] == state[12]:
             idx = 2
-        else: 
+        else:
             raise IndexError
 
         travelled_distance = self.dest_passengers[idx]
@@ -192,16 +207,16 @@ class Tracker:
         return travalled_idx
 
     def track_actions(self, state, action):
-        
-        if action == 6: 
-            self.do_nothing += 1
 
-            if state[7] == -1 and state[8] == -1: 
+        if action == 6:
+            self.do_nothing += 1
+            if state[7] == -1 and state[8] == -1:
                 self.do_nothing_opt += 1
-            else: 
+            else:
                 self.do_nothing_sub += 1
 
-class MultiTracker(Tracker): 
+
+class MultiTracker(Tracker):
     def __init__(self, n_agents):
 
         self.n_agents = n_agents
@@ -217,7 +232,7 @@ class MultiTracker(Tracker):
         self.mean_drop_off_path = [[] for _ in range(n_agents)]
         self.total_number_passenger = [[] for _ in range(n_agents)]
         self.eps_counter = 0
-        self.do_nothing = [0,0]
+        self.do_nothing = [0, 0]
         self.init_episode_vars()
 
     def init_episode_vars(self):
@@ -236,7 +251,7 @@ class MultiTracker(Tracker):
 
     def new_episode(self):
 
-        self.do_nothing = [0,0]
+        self.do_nothing = [0, 0]
 
         if self.eps_counter > 0:
             for i in range(self.n_agents):
@@ -257,9 +272,9 @@ class MultiTracker(Tracker):
         self.eps_counter += 1
 
     def track_reward(self, rewards):
-        
+
         assert len(rewards) == self.n_agents
-        
+
         for i in range(len(rewards)):
             if rewards[i] == -5:
                 self.illegal_moves_ep[i] += 1
@@ -283,28 +298,21 @@ class MultiTracker(Tracker):
             else:
                 self.no_passenger_steps[i] += 1
 
-    def track_adv_reward(self, rewards):        
+    def track_adv_reward(self, rewards):
         for i in range(len(rewards)):
             self.episode_adv_reward[i] += rewards[i]
 
     def track_actions(self, actions):
 
-        if actions[0] == 6: 
+        if actions[0] == 6:
             self.do_nothing[0] += 1
-        if actions[1] == 6: 
+        if actions[1] == 6:
             self.do_nothing[1] += 1
-
 
     def get_pick_ups(self):
         return [picks // 2 for picks in self.pick_ups]
 
-
     def plot(self, log_path):
-        plot_multiple_agents(self.adv_rewards, "adv_rewards",log_path)
-        plot_multiple_agents(self.rewards, "rewards",log_path)
-        plot_multiple_agents(self.n_passengers, "passengers",log_path)
-        # plot_multiple_agents(self.mean_pick_up_path, "steps",log_path, sum=False)
-
-
-
-
+        plot_multiple_agents(self.adv_rewards, "adv_rewards", log_path)
+        plot_multiple_agents(self.rewards, "rewards", log_path)
+        plot_multiple_agents(self.n_passengers, "passengers", log_path)

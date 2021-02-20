@@ -2,32 +2,32 @@ import os
 import time
 import logging
 import numpy as np
-
+from pyvirtualdisplay import Display
 from collections import deque
 
 import gym
 import gym_cabworld
 
 from algorithms.dqn_model import DQN, gen_epsilon_greedy_policy
-
 from common.logging import create_log_folder, get_last_folder
 from common.logging import Tracker
 
 
-n_states = 9
-n_actions = 7
-n_hidden = 32
-
 # Fill buffer
 episodes_without_training = 100
 
+
 def train_dqn(n_episodes, munchhausen=False):
 
-    from pyvirtualdisplay import Display
-    # Display().start()
+    disp = Display()
+    disp.start()
 
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
+
+    n_states = env.observation_space.shape[1]
+    n_actions = env.action_space.n
+    n_hidden = 32
 
     lr = 0.001
     gamma = 0.975
@@ -52,10 +52,6 @@ def train_dqn(n_episodes, munchhausen=False):
 
         policy = gen_epsilon_greedy_policy(dqn, epsilon, n_actions)
         state = env.reset()
-        # state = clip_state(state, n_clip)
-        # state = cut_off_state(state, n_state)
-
-        # tracker.save_dest_to_passengers(state)
 
         is_done = False
         steps = 0
@@ -70,24 +66,18 @@ def train_dqn(n_episodes, munchhausen=False):
             tracker.track_actions(state, action)
 
             next_state, reward, is_done, _ = env.step(action)
-            # next_state = clip_state(next_state, n_clip)
-            # next_state = cut_off_state(next_state, n_state)
-
-            tracker.track_reward(reward, action, state, next_state)
-
-            # reward += calc_potential(state, state, gamma)
-
+            tracker.track_reward(reward)
             memory.append((state, action, next_state, reward, is_done))
 
             if episode > episodes_without_training and steps % 10 == 0:
                 if munchhausen:
                     dqn.replay_munchhausen(memory, replay_size, gamma)
-                else: 
+                else:
                     dqn.replay(memory, replay_size, gamma)
 
             if is_done:
                 print(
-                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()} Opt: {tracker.get_opt_pick_ups()}"
+                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
                 )
                 if tracker.get_pick_ups() < 1:
                     for _ in range(1000):
@@ -106,6 +96,11 @@ def deploy_dqn(n_episodes, wait):
 
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
+
+    n_states = env.observation_space.shape[1]
+    n_actions = env.action_space.n
+    n_hidden = 32
+
     dqn = DQN(n_states, n_actions, n_hidden)
 
     current_folder = get_last_folder("dqn")

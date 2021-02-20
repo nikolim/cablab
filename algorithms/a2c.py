@@ -15,13 +15,14 @@ from common.logging import Tracker
 def train_a2c(n_episodes):
 
     from pyvirtualdisplay import Display
+
     Display().start()
 
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    n_states = 14
-    n_actions = 6
+    n_states = env.observation_space.shape[1]
+    n_actions = env.action_space.n
     max_timesteps = 1000
     gamma = 0.99
     rewards = []
@@ -35,8 +36,6 @@ def train_a2c(n_episodes):
 
         tracker.new_episode()
         state = env.reset()
-        # state = clip_state(state, n_clip)
-        # state = cut_off_state(state, n_state)
 
         log_probs = []
         state_values = []
@@ -45,8 +44,6 @@ def train_a2c(n_episodes):
 
             action, log_prob, state_value = a2c.get_action(state)
             state, reward, done, _ = env.step(action)
-            # state = clip_state(state, n_clip)
-            # state = cut_off_state(state, n_state)
 
             tracker.track_reward(reward)
             log_probs.append(log_prob)
@@ -80,8 +77,8 @@ def deploy_a2c(n_episodes, wait):
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    n_states = 14
-    n_actions = 6
+    n_states = env.observation_space.shape[1]
+    n_actions = env.action_space.n
 
     a2c = PolicyNetwork(n_states, n_actions)
 
