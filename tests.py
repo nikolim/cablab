@@ -62,8 +62,10 @@ def test_ma_dqn_deploy():
 def test_ma_ppo_train():
     train_ma_ppo(n_episodes=1)
 
+
 def test_ma_ppo_deploy():
     deploy_ma_ppo(n_episodes=1, wait=0)
+
 
 def test_clip_state():
     state = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]

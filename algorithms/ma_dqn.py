@@ -135,20 +135,17 @@ def train_ma_dqn(n_episodes, munchhausen=False):
 
                 adv_memorys[i].append((adv_inputs[i], msgs[i], adv_rewards[i]))
 
-
                 if episode > episodes_without_training and steps % 10 == 0:
 
                     adv_models[i].replay(adv_memorys[i], replay_size)
 
-                    if episode > (episodes_without_training + episodes_only_adv): 
+                    if episode > (episodes_without_training + episodes_only_adv):
                         if munchhausen:
                             dqn_models[i].replay_munchhausen(
                                 memorys[i], replay_size, gamma
                             )
                         else:
                             dqn_models[i].replay(memorys[i], replay_size, gamma)
-
-                    
 
             if is_done:
                 print(
@@ -160,7 +157,7 @@ def train_ma_dqn(n_episodes, munchhausen=False):
             adv_inputs = adv_inputs_next
             msgs = msgs_next
 
-        if episode > episodes_without_training: 
+        if episode > episodes_without_training:
             adv_epsilon = max(adv_epsilon * adv_epsilon_decay, 0.01)
 
         if episode > (episodes_without_training + episodes_only_adv):
@@ -223,7 +220,7 @@ def deploy_ma_dqn(n_episodes, wait):
             for i in range(n_agents):
                 msgs.append(adv_models[i].deploy((adv_inputs[i])))
             states = add_msg_to_states(states, msgs)
-            
+
             episode_reward += sum(rewards)
             env.render()
             time.sleep(wait)

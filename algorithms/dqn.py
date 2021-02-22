@@ -1,3 +1,4 @@
+from math import log
 import os
 import time
 import logging
@@ -9,12 +10,12 @@ import gym
 import gym_cabworld
 
 from algorithms.dqn_model import DQN, gen_epsilon_greedy_policy
-from common.logging import create_log_folder, get_last_folder
+from common.logging import create_log_folder, create_logger, get_last_folder
 from common.logging import Tracker
 
 
 # Fill buffer
-episodes_without_training = 100
+episodes_without_training = 10
 
 
 def train_dqn(n_episodes, munchhausen=False):
@@ -37,6 +38,7 @@ def train_dqn(n_episodes, munchhausen=False):
     target_update = 5
 
     log_path = create_log_folder("dqn")
+    logger = create_logger(log_path)
     tracker = Tracker()
 
     dqn = DQN(n_states, n_actions, n_hidden, lr)
@@ -85,8 +87,12 @@ def train_dqn(n_episodes, munchhausen=False):
 
                 break
             state = next_state
+
         if episode > episodes_without_training:
             epsilon = max(epsilon * epsilon_decay, 0.01)
+
+        if episode > 0:
+            tracker.track_epsilon(epsilon)
 
     dqn.save_model(log_path)
     tracker.plot(log_path)
