@@ -1,12 +1,22 @@
 import os
-from scipy.signal.filter_design import EPSILON
-from scipy.signal.ltisys import step
 import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 import matplotlib.colors as mc
 import colorsys
+
+
+color_dict = {
+    "rewards": "royalblue",
+    "n_passengers": "forestgreen",
+    "illegal_pick_ups": "sandybrown",
+    "illegal_moves": "peru",
+    "do_nothing_arr": "salmon",
+    "do_nothing_opt_arr": "sandybrown",
+    "do_nothing_sub_arr": "peru",
+    "epsilon": "orange",
+}
 
 REWARD_COLOR = "royalblue"
 PASSENGER_COLOR = "forestgreen"
@@ -48,297 +58,91 @@ def smoothing_mean_std(arr, step_size):
     return mean_arr, std_arr, x_values
 
 
-def plot_rewards(rewards, path):
-
-    mean_rewards, std_rewards, x = smoothing_mean_std(rewards, step_size=10)
+def plot_values(df, ids, path, double_scale=False):
 
     fig, ax1 = plt.subplots()
     ax1.set_xlabel("Episodes")
-    ax1.set_ylabel("Reward")
-    ax1.plot(x, mean_rewards, color=REWARD_COLOR)
-    ax1.fill_between(
-        x,
-        mean_rewards + std_rewards,
-        mean_rewards - std_rewards,
-        alpha=0.2,
-        color=REWARD_COLOR,
-    )
-    plt.savefig(os.path.join(path, "rewards.png"))
 
-
-def plot_opt_pick_ups(opt_pick_ups, path):
-
-    mean_opt_pick_ups, std_opt_pick_ups, x = smoothing_mean_std(
-        opt_pick_ups, step_size=10
-    )
-    fig, ax1 = plt.subplots()
-    ax1.set_xlabel("Episodes")
-    ax1.set_ylabel("Optimal Pick-up")
-    ax1.plot(x, mean_opt_pick_ups, color=OPT_PICK_UP_COLOR)
-    ax1.fill_between(
-        x,
-        mean_opt_pick_ups + std_opt_pick_ups,
-        mean_opt_pick_ups - std_opt_pick_ups,
-        alpha=0.2,
-        color=OPT_PICK_UP_COLOR,
-    )
-    plt.savefig(os.path.join(path, "opt_pick_ups.png"))
-
-
-def plot_rewards_and_entropy(rewards, entropy, path):
-
-    mean_rewards, std_rewards, x = smoothing_mean_std(rewards, step_size=10)
-    mean_entropy, std_entropy, x = smoothing_mean_std(entropy, step_size=10)
-
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-    ax1.tick_params(axis="y")
-    ax2.tick_params(axis="y")
-
-    ax1.set_xlabel("Episodes")
-    ax1.set_ylabel("Reward", color=REWARD_COLOR)
-    ax1.plot(x, mean_rewards, color=REWARD_COLOR)
-    ax1.fill_between(
-        x,
-        mean_rewards + std_rewards,
-        mean_rewards - std_rewards,
-        alpha=0.2,
-        color=REWARD_COLOR,
-    )
-    ax2.set_ylabel("Entropy", color=ENTROPY_COLOR)
-    ax2.plot(x, mean_entropy, color=ENTROPY_COLOR)
-    ax1.fill_between(
-        x,
-        mean_entropy + std_entropy,
-        mean_entropy - std_entropy,
-        alpha=0.2,
-        color=REWARD_COLOR,
-    )
-
-    fig.tight_layout()
-    plt.savefig(os.path.join(path, "rewards_entropy.png"))
-
-
-def plot_rewards_and_epsilon(rewards, epsilon, path):
-
-    mean_rewards, std_rewards, x = smoothing_mean_std(rewards, step_size=10)
-    mean_epsilon, std_epsilon, x = smoothing_mean_std(epsilon, step_size=10)
-
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-    ax1.tick_params(axis="y")
-    ax2.tick_params(axis="y")
-
-    ax1.set_xlabel("Episodes")
-    ax1.set_xlabel("Episodes")
-    ax1.set_ylabel("Reward", color=REWARD_COLOR)
-    ax1.plot(x, mean_rewards, color=REWARD_COLOR)
-    ax1.fill_between(
-        x,
-        mean_rewards + std_rewards,
-        mean_rewards - std_rewards,
-        alpha=0.2,
-        color=REWARD_COLOR,
-    )
-
-    ax2.set_ylabel("Epsilon", color=EPSILON_COLOR)
-    ax2.plot(x, mean_epsilon, color=EPSILON_COLOR)
-    ax2.fill_between(
-        x,
-        mean_epsilon + std_epsilon,
-        mean_epsilon - std_epsilon,
-        alpha=0.2,
-        color=EPSILON_COLOR,
-    )
-
-    fig.tight_layout()
-    plt.savefig(os.path.join(path, "rewards_epsilon.png"))
-
-
-def plot_rewards_and_passengers(rewards, n_passenger, path):
-
-    mean_rewards, std_rewards, x = smoothing_mean_std(rewards, step_size=10)
-    mean_pass, std_pass, x = smoothing_mean_std(n_passenger, step_size=10)
-
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-    ax1.tick_params(axis="y")
-    ax2.tick_params(axis="y")
-
-    ax1.set_xlabel("Episodes")
-    ax1.set_ylabel("Reward", color=REWARD_COLOR)
-    ax1.plot(x, mean_rewards, color=REWARD_COLOR)
-    ax1.fill_between(
-        x,
-        mean_rewards + std_rewards,
-        mean_rewards - std_rewards,
-        alpha=0.2,
-        color=REWARD_COLOR,
-    )
-
-    ax2.set_ylabel("Passengers", color=PASSENGER_COLOR)
-    ax2.plot(x, mean_pass, color=PASSENGER_COLOR)
-    ax2.fill_between(
-        x, mean_pass + std_pass, mean_pass - std_pass, alpha=0.2, color=PASSENGER_COLOR
-    )
-
-    fig.tight_layout()
-    plt.savefig(os.path.join(path, "rewards_passengers.png"))
-
-
-def plot_do_nothing(do_nothing, do_nothing_opt, do_nothing_sub, path):
-
-    mean_do, std_do, x = smoothing_mean_std(do_nothing, step_size=10)
-    mean_opt, std_opt, x = smoothing_mean_std(do_nothing_opt, step_size=10)
-    mean_sub, std_sub, x = smoothing_mean_std(do_nothing_sub, step_size=10)
-
-    fig, ax1 = plt.subplots()
-    ax1.tick_params(axis="y")
-
-    ax1.set_xlabel("Episodes")
-    ax1.set_ylabel("Do nothing")
-
-    ax1.plot(x, mean_do, color=ENTROPY_COLOR, label="Do nothing")
-    ax1.fill_between(
-        x, mean_do + std_do, mean_do - std_do, alpha=0.2, color=ENTROPY_COLOR
-    )
-
-    ax1.plot(x, mean_opt, color=EPSILON_COLOR, label="Optimal")
-    ax1.fill_between(
-        x, mean_opt + std_opt, mean_opt - std_opt, alpha=0.2, color=EPSILON_COLOR
-    )
-
-    ax1.plot(x, mean_sub, color=ILLEGAL_MOVE_COLOR, label="Suboptimal")
-    ax1.fill_between(
-        x, mean_sub + std_sub, mean_sub - std_sub, alpha=0.2, color=ILLEGAL_MOVE_COLOR
-    )
-
-    plt.legend(loc="best")
-    fig.tight_layout()
-    plt.savefig(os.path.join(path, "do_nothing_steps.png"))
-
-
-def plot_multiple_agents(data, description, path, sum=True):
-
-    if description == "rewards":
-        color = REWARD_COLOR
-    elif description == "passengers":
-        color = PASSENGER_COLOR
+    if double_scale:
+        assert len(ids) == 2
+        ax2 = ax1.twinx()
+        id = ids[0]
+        data = df[id]
+        mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=10)
+        ax1.set_ylabel(id, color=color_dict[id])
+        ax1.plot(x, mean_rewards, color=color_dict[id], label=id)
+        ax1.fill_between(
+            x,
+            mean_rewards + std_rewards,
+            mean_rewards - std_rewards,
+            alpha=0.2,
+            color=color_dict[id],
+        )
+        id = ids[1]
+        data = df[id]
+        mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=10)
+        ax2.set_ylabel(id, color=color_dict[id])
+        ax2.plot(x, mean_rewards, color=color_dict[id], label=id)
+        ax2.fill_between(
+            x,
+            mean_rewards + std_rewards,
+            mean_rewards - std_rewards,
+            alpha=0.2,
+            color=color_dict[id],
+        )
     else:
-        color = STANDARD_COLOR
+        for id in ids:
+            data = df[id]
+            mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=10)
+
+            ax1.plot(x, mean_rewards, color=color_dict[id], label=id)
+            ax1.fill_between(
+                x,
+                mean_rewards + std_rewards,
+                mean_rewards - std_rewards,
+                alpha=0.2,
+                color=color_dict[id],
+            )
+
+    if len(ids) == 1:
+        ax1.set_ylabel(ids[0])
+    else:
+        plt.legend(loc="best")
+
+    fig.tight_layout()
+    name = "_".join(ids)
+    plt.savefig(os.path.join(path, name + ".png"))
+
+
+def plot_mult_agent(dfs, ids, path): 
 
     fig, ax1 = plt.subplots()
     ax1.set_xlabel("Episodes")
-    ax1.set_ylabel(description)
 
-    if sum:
-        np_arr = [np.array([tmp]) for tmp in data]
-        summed = np.sum(np_arr, axis=0)
+    
+    for id in ids:
 
-        total_color = adjust_lightness(color, 0.5)
+        color = color_dict[id]
+        amount = 1
 
-        mean_rewards, std_rewards, x = smoothing_mean_std(summed.T, step_size=10)
-        ax1.plot(x, mean_rewards, color=total_color, label="Total")
-        ax1.fill_between(
-            x,
-            mean_rewards + std_rewards,
-            mean_rewards - std_rewards,
-            alpha=0.2,
-            color=total_color,
-        )
+        for i,df in enumerate(dfs):
+            data = df[id]
+            color = adjust_lightness(color_dict[id], amount)
+            
+            mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=10)
+            ax1.plot(x, mean_rewards, color=color, label=(id + str(i)))
+            ax1.fill_between(
+                x,
+                mean_rewards + std_rewards,
+                mean_rewards - std_rewards,
+                alpha=0.2,
+                color=color,
+            )
 
-    for i, rewards in enumerate(data):
-        mean_rewards, std_rewards, x = smoothing_mean_std(rewards, step_size=10)
-        ax1.plot(x, mean_rewards, color=color, label=("Agent " + str(i)))
-        ax1.fill_between(
-            x,
-            mean_rewards + std_rewards,
-            mean_rewards - std_rewards,
-            alpha=0.2,
-            color=color,
-        )
-
-    plt.legend(loc="best")
-    plt.savefig(os.path.join(path, "multiple_" + str(description) + ".png"))
-
-
-def plot_rewards_and_illegal_actions(rewards, illegal_drop_offs, illegal_moves, path):
-
-    mean_rewards, std_rewards, x = smoothing_mean_std(rewards, step_size=10)
-    mean_drop, std_drop, x = smoothing_mean_std(illegal_drop_offs, step_size=10)
-    mean_moves, std_moves, x = smoothing_mean_std(illegal_moves, step_size=10)
-
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-    ax1.tick_params(axis="y")
-    ax2.tick_params(axis="y")
-
-    ax1.set_xlabel("Episodes")
-    ax1.plot(x, mean_rewards, color=REWARD_COLOR)
-    ax1.fill_between(
-        x,
-        mean_rewards + std_rewards,
-        mean_rewards - std_rewards,
-        alpha=0.2,
-        color=REWARD_COLOR,
-    )
-
-    ax2.set_ylabel("Moves")
-
-    ax2.plot(x, mean_drop, color=ILLEGAL_PICK_UP_COLOR, label="Illegal Drop-Offs")
-    ax2.fill_between(
-        x,
-        mean_drop + std_drop,
-        mean_drop - std_drop,
-        alpha=0.2,
-        color=ILLEGAL_PICK_UP_COLOR,
-    )
-    ax2.plot(x, mean_moves, color=ILLEGAL_MOVE_COLOR, label="Illegal Moves")
-    ax2.fill_between(
-        x,
-        mean_moves + std_moves,
-        mean_moves - std_moves,
-        alpha=0.2,
-        color=ILLEGAL_MOVE_COLOR,
-    )
+            amount -= (0.5/len(dfs))
 
     plt.legend(loc="best")
     fig.tight_layout()
-    plt.savefig(os.path.join(path, "rewards_illegal_actions.png"))
+    name = "_".join(ids)
 
-
-def plot_mean_pick_up_drop_offs(pick_up_mean, drop_off_mean, path):
-
-    mean_pick, std_pick, x = smoothing_mean_std(pick_up_mean, step_size=10)
-    mean_drop, std_drop, x = smoothing_mean_std(drop_off_mean, step_size=10)
-
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-    ax1.tick_params(axis="y")
-    ax2.tick_params(axis="y")
-
-    ax1.set_xlabel("Episodes")
-
-    ax1.set_ylabel("Pick-Up-Steps", color=ILLEGAL_PICK_UP_COLOR)
-    ax1.plot(x, mean_pick, color=ILLEGAL_PICK_UP_COLOR, label="Pick-Up-Steps")
-    ax1.fill_between(
-        x,
-        mean_pick + std_pick,
-        mean_pick - std_pick,
-        alpha=0.2,
-        color=ILLEGAL_PICK_UP_COLOR,
-    )
-
-    ax2.set_ylabel("Drop-Off-Steps", color=ILLEGAL_MOVE_COLOR)
-    ax2.plot(x, mean_drop, color=ILLEGAL_MOVE_COLOR, label="Drop-Off-Steps")
-    ax2.fill_between(
-        x,
-        mean_drop + std_drop,
-        mean_drop - std_drop,
-        alpha=0.2,
-        color=ILLEGAL_MOVE_COLOR,
-    )
-
-    # plt.legend(loc='best')
-    fig.tight_layout()
-    plt.savefig(os.path.join(path, "pick_up_drop_off_path.png"))
+    plt.savefig(os.path.join(path, name + "_mult.png"))

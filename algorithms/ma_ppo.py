@@ -52,7 +52,7 @@ def train_ma_ppo(n_episodes):
                 mappo.update(memory, episode)
                 memory.clear()
                 print(
-                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
+                    f"Episode: {episode} Reward: {tracker.get_rewards()} Passengers {tracker.get_pick_ups()}"
                 )
                 break
 
