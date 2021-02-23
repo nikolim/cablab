@@ -15,7 +15,7 @@ from common.logging import Tracker
 
 
 # Fill buffer
-episodes_without_training = 10
+episodes_without_training = 100
 
 
 def train_dqn(n_episodes, munchhausen=False):

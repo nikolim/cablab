@@ -24,7 +24,7 @@ from common.logging import MultiTracker
 
 # Fill buffer
 episodes_without_training = 100
-episodes_only_adv = 200
+episodes_only_adv = 100
 
 
 def train_ma_dqn(n_episodes, munchhausen=False):
@@ -149,7 +149,7 @@ def train_ma_dqn(n_episodes, munchhausen=False):
 
             if is_done:
                 print(
-                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()} Do-nothing {tracker.do_nothing} ADV {tracker.episode_adv_reward}"
+                    f"Episode: {episode} Reward: {tracker.get_rewards()} Passengers {tracker.get_pick_ups()} Do-nothing {tracker.get_do_nothing()} ADV {tracker.adv_episode_rewards}"
                 )
                 break
 
@@ -163,9 +163,13 @@ def train_ma_dqn(n_episodes, munchhausen=False):
         if episode > (episodes_without_training + episodes_only_adv):
             epsilon = max(epsilon * epsilon_decay, 0.01)
 
+        if episode > 0:
+            tracker.track_epsilon(epsilon)
+
     for i in range(n_agents):
         dqn_models[i].save_model(log_path, number=str(i + 1))
         adv_models[i].save_model(log_path, number=str(i + 1))
+
     tracker.plot(log_path)
 
 

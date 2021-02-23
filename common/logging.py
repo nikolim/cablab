@@ -191,7 +191,7 @@ class Tracker:
         df.to_csv(file_name)
 
         plot_values(df, ["rewards"], log_path)
-        plot_values(df, ["rewards", "n_passengers"], log_path)
+        plot_values(df, ["rewards", "n_passengers"], log_path, double_scale=True)
         plot_values(df, ["rewards", "illegal_pick_ups", "illegal_moves"], log_path)
         plot_values(
             df, ["do_nothing_arr", "do_nothing_opt_arr", "do_nothing_sub_arr"], log_path
@@ -199,103 +199,74 @@ class Tracker:
         plot_values(df, ["rewards", "epsilon"], log_path, double_scale=True)
 
 
-class MultiTracker(Tracker):
-    def __init__(self, n_agents):
+class MultiTracker():
+    def __init__(self, n_agents, logger=None):
 
         self.n_agents = n_agents
+        self.trackers = []
+        self.adv_rewards = []
+        self.adv_episode_rewards = [0] * self.n_agents
 
         # storage for all episodes
-        self.illegal_pick_ups = [[] for _ in range(n_agents)]
-        self.illegal_moves = [[] for _ in range(n_agents)]
-        self.epsilon = [[] for _ in range(n_agents)]
-        self.n_passengers = [[] for _ in range(n_agents)]
-        self.rewards = [[] for _ in range(n_agents)]
-        self.adv_rewards = [[] for _ in range(n_agents)]
-        self.mean_pick_up_path = [[] for _ in range(n_agents)]
-        self.mean_drop_off_path = [[] for _ in range(n_agents)]
-        self.total_number_passenger = [[] for _ in range(n_agents)]
-        self.eps_counter = 0
-        self.do_nothing = [0, 0]
+        for i in (range(n_agents)): 
+            tracker = Tracker(logger)
+            self.trackers.append(tracker)
+        
         self.init_episode_vars()
 
     def init_episode_vars(self):
-
         # storage for one episode
-        self.episode_reward = [0] * self.n_agents
-        self.episode_adv_reward = [0] * self.n_agents
-        self.pick_ups = [0] * self.n_agents
-        self.illegal_pick_up_ep = [0] * self.n_agents
-        self.illegal_moves_ep = [0] * self.n_agents
-        self.passenger = [False] * self.n_agents
-        self.pick_up_drop_off_steps = [[] for _ in range(self.n_agents)]
-        self.drop_off_pick_up_steps = [[] for _ in range(self.n_agents)]
-        self.passenger_steps = [0] * self.n_agents
-        self.no_passenger_steps = [0] * self.n_agents
+
+        for tracker in self.trackers: 
+            tracker.init_episode_vars()
 
     def new_episode(self):
 
-        self.do_nothing = [0, 0]
+        self.adv_rewards.append(self.adv_episode_rewards)
 
-        if self.eps_counter > 0:
-            for i in range(self.n_agents):
-                self.rewards[i].append(self.episode_reward[i])
-                self.adv_rewards[i].append(self.episode_adv_reward[i])
-                self.illegal_pick_ups[i].append(self.illegal_pick_up_ep[i])
-                self.illegal_moves[i].append(self.illegal_moves_ep[i])
-                self.n_passengers[i].append(self.pick_ups[i] // 2)
-                if len(self.drop_off_pick_up_steps[i]) > 0:
-                    self.mean_pick_up_path[i].append(
-                        (np.array(self.drop_off_pick_up_steps[i]).mean())
-                    )
-                    self.mean_drop_off_path.append(
-                        (np.array(self.pick_up_drop_off_steps[i]).mean())
-                    )
-
-        self.init_episode_vars()
-        self.eps_counter += 1
-
+        for tracker in self.trackers: 
+            tracker.new_episode()
+        
+        self.adv_episode_rewards = [0] * self.n_agents
+            
     def track_reward(self, rewards):
-
-        assert len(rewards) == self.n_agents
-
-        for i in range(len(rewards)):
-            if rewards[i] == -5:
-                self.illegal_moves_ep[i] += 1
-            if rewards[i] == -10:
-                self.illegal_pick_up_ep[i] += 1
-            if rewards[i] == 100:
-                if self.passenger[i]:
-                    self.drop_off_pick_up_steps[i].append(self.no_passenger_steps[i])
-                    self.no_passenger_steps[i] = 0
-                else:
-                    self.pick_up_drop_off_steps[i].append(self.passenger_steps[i])
-                    self.passenger_steps[i] = 0
-
-                self.passenger[i] = not self.passenger[i]
-                self.pick_ups[i] += 1
-
-            self.episode_reward[i] += rewards[i]
-
-            if self.passenger[i]:
-                self.passenger_steps[i] += 1
-            else:
-                self.no_passenger_steps[i] += 1
+        for i, tracker in enumerate(self.trackers):
+            tracker.track_reward(rewards[i]) 
 
     def track_adv_reward(self, rewards):
         for i in range(len(rewards)):
-            self.episode_adv_reward[i] += rewards[i]
+            self.adv_episode_rewards[i] += rewards[i]
 
     def track_actions(self, actions):
+       for i, tracker in enumerate(self.trackers):
+            tracker.track_reward(actions[i]) 
 
-        if actions[0] == 6:
-            self.do_nothing[0] += 1
-        if actions[1] == 6:
-            self.do_nothing[1] += 1
+    def track_epsilon(self, epsilon):
+       for i, tracker in enumerate(self.trackers):
+            tracker.track_epsilon(epsilon) 
 
     def get_pick_ups(self):
-        return [picks // 2 for picks in self.pick_ups]
+        pick_ups = [tracker.get_pick_ups() for tracker in self.trackers]
+        return pick_ups
+
+    def get_rewards(self): 
+        rewards = [tracker.episode_reward for tracker in self.trackers]
+        return rewards
+
+    def get_do_nothing(self): 
+        do_nothing = [tracker.do_nothing for tracker in self.trackers]
+        return do_nothing
 
     def plot(self, log_path):
-        plot_multiple_agents(self.adv_rewards, "adv_rewards", log_path)
-        plot_multiple_agents(self.rewards, "rewards", log_path)
-        plot_multiple_agents(self.n_passengers, "passengers", log_path)
+
+        dfs = []
+        for tracker in self.trackers: 
+            df = pd.DataFrame()
+            for value in total_values:
+                df[value] = tracker.total_values_dict[value]
+            dfs.append(df)
+
+        plot_mult_agent(dfs, ["rewards"], log_path)
+        plot_mult_agent(dfs, ["n_passengers"], log_path)
+        plot_mult_agent(dfs, ["rewards", "illegal_pick_ups", "illegal_moves"], log_path)
+        plot_mult_agent(dfs, ["do_nothing_arr", "do_nothing_opt_arr", "do_nothing_sub_arr"], log_path)

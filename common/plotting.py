@@ -1,6 +1,4 @@
 import os
-from scipy.signal.filter_design import EPSILON
-from scipy.signal.ltisys import step
 import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,10 +12,10 @@ color_dict = {
     "n_passengers": "forestgreen",
     "illegal_pick_ups": "sandybrown",
     "illegal_moves": "peru",
-    "do_nothing_arr": "salmon", 
-    "do_nothing_opt_arr": "sandybrown", 
-    "do_nothing_sub_arr": "peru", 
-    "epsilon": "orange"
+    "do_nothing_arr": "salmon",
+    "do_nothing_opt_arr": "sandybrown",
+    "do_nothing_sub_arr": "peru",
+    "epsilon": "orange",
 }
 
 REWARD_COLOR = "royalblue"
@@ -116,45 +114,35 @@ def plot_values(df, ids, path, double_scale=False):
     plt.savefig(os.path.join(path, name + ".png"))
 
 
-def plot_multiple_agents(data, description, path, sum=True):
-
-    if description == "rewards":
-        color = REWARD_COLOR
-    elif description == "passengers":
-        color = PASSENGER_COLOR
-    else:
-        color = STANDARD_COLOR
+def plot_mult_agent(dfs, ids, path): 
 
     fig, ax1 = plt.subplots()
     ax1.set_xlabel("Episodes")
-    ax1.set_ylabel(description)
 
-    if sum:
-        np_arr = [np.array([tmp]) for tmp in data]
-        summed = np.sum(np_arr, axis=0)
+    
+    for i, id in enumerate(ids):
 
-        total_color = adjust_lightness(color, 0.5)
+        color = color_dict[id]
+        amount = 1
 
-        mean_rewards, std_rewards, x = smoothing_mean_std(summed.T, step_size=10)
-        ax1.plot(x, mean_rewards, color=total_color, label="Total")
-        ax1.fill_between(
-            x,
-            mean_rewards + std_rewards,
-            mean_rewards - std_rewards,
-            alpha=0.2,
-            color=total_color,
-        )
-
-    for i, rewards in enumerate(data):
-        mean_rewards, std_rewards, x = smoothing_mean_std(rewards, step_size=10)
-        ax1.plot(x, mean_rewards, color=color, label=("Agent " + str(i)))
-        ax1.fill_between(
-            x,
-            mean_rewards + std_rewards,
-            mean_rewards - std_rewards,
-            alpha=0.2,
-            color=color,
-        )
+        for df in dfs:
+            data = df[id]
+            color = adjust_lightness(color_dict[id], amount)
+            
+            mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=10)
+            ax1.plot(x, mean_rewards, color=color, label=(id + str(i)))
+            ax1.fill_between(
+                x,
+                mean_rewards + std_rewards,
+                mean_rewards - std_rewards,
+                alpha=0.2,
+                color=color,
+            )
+            
+            amount -= (0.5/len(dfs))
 
     plt.legend(loc="best")
-    plt.savefig(os.path.join(path, "multiple_" + str(description) + ".png"))
+    fig.tight_layout()
+    name = "_".join(ids)
+
+    plt.savefig(os.path.join(path, name + "_mult.png"))
