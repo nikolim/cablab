@@ -19,7 +19,7 @@ from common.features import (
     send_pos_to_other_cab,
     calc_adv_rewards,
 )
-from common.logging import create_log_folder, get_last_folder
+from common.logging import create_log_folder, create_logger, get_last_folder
 from common.logging import MultiTracker
 
 # Fill buffer
@@ -55,7 +55,8 @@ def train_ma_dqn(n_episodes, munchhausen=False):
     target_update = 5
 
     log_path = create_log_folder("ma-dqn")
-    tracker = MultiTracker(n_agents=n_agents)
+    logger = create_logger(log_path)
+    tracker = MultiTracker(n_agents=n_agents, logger=logger)
 
     dqn_models = []
     adv_models = []

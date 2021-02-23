@@ -90,6 +90,8 @@ Every traning runs creates the following plots (here for single-agent-DQN)
 
 ## Changelog
 
+### [0.5] (https://gitlab.com/nlimbrun/cablab/-/tags/release_0.5) (20.02.2021)
+- Improved plotting and logging
 
 ### [0.4] (https://gitlab.com/nlimbrun/cablab/-/tags/release_0.4) (20.02.2021)
 - Added AdvNet, Improved algorithms, extended plotting and logging

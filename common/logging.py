@@ -260,13 +260,31 @@ class MultiTracker():
     def plot(self, log_path):
 
         dfs = []
-        for tracker in self.trackers: 
+        for i, tracker in enumerate(self.trackers): 
             df = pd.DataFrame()
             for value in total_values:
                 df[value] = tracker.total_values_dict[value]
             dfs.append(df)
+            file_name = os.path.join(log_path, "logs" + str(i+1) + ".csv")
+            df.to_csv(file_name)
 
         plot_mult_agent(dfs, ["rewards"], log_path)
         plot_mult_agent(dfs, ["n_passengers"], log_path)
         plot_mult_agent(dfs, ["rewards", "illegal_pick_ups", "illegal_moves"], log_path)
         plot_mult_agent(dfs, ["do_nothing_arr", "do_nothing_opt_arr", "do_nothing_sub_arr"], log_path)
+
+
+    def plot_from_files(): 
+
+        files = ["/home/niko/Info/cablab/runs/ma-dqn/34/logs1.csv", "/home/niko/Info/cablab/runs/ma-dqn/34/logs2.csv"]
+        dfs = []
+        log_path = ""
+        ids = ["rewards"]
+
+        for file in files: 
+            df = pd.DataFrame()
+            df.read_csv(file)
+            dfs.append(df)
+
+        plot_mult_agent(dfs, ids, log_path)
+        

@@ -120,12 +120,12 @@ def plot_mult_agent(dfs, ids, path):
     ax1.set_xlabel("Episodes")
 
     
-    for i, id in enumerate(ids):
+    for id in ids:
 
         color = color_dict[id]
         amount = 1
 
-        for df in dfs:
+        for i,df in enumerate(dfs):
             data = df[id]
             color = adjust_lightness(color_dict[id], amount)
             
@@ -138,7 +138,7 @@ def plot_mult_agent(dfs, ids, path):
                 alpha=0.2,
                 color=color,
             )
-            
+
             amount -= (0.5/len(dfs))
 
     plt.legend(loc="best")
