@@ -89,5 +89,5 @@ def deploy_ma_ppo(n_episodes, wait):
             env.render()
             time.sleep(float(wait))
             if done:
-                print(f"Reward {gi}")
+                print(f"Reward {episode_reward}")
                 break
