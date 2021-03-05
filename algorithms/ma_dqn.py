@@ -23,11 +23,9 @@ from common.logging import create_log_folder, create_logger, get_last_folder
 from common.logging import MultiTracker
 
 # Fill buffer
-episodes_without_training = 100
-episodes_only_adv = 100
+episodes_without_training = 10
 
-
-def train_ma_dqn(n_episodes, munchhausen=False):
+def train_ma_dqn(n_episodes, munchhausen=False, adv=False):
 
     disp = Display()
     disp.start()
@@ -36,10 +34,15 @@ def train_ma_dqn(n_episodes, munchhausen=False):
     env = gym.make(env_name)
 
     n_agents = env.observation_space.shape[0]
-    assert n_agents == 2  # ADVNET
+
+    if adv:
+        assert n_agents == 2  # ADVNET
+        episodes_only_adv = 10
+    else: 
+        episodes_only_adv = 0
 
     # calc additional msg signal
-    n_states = env.observation_space.shape[1] + 1
+    n_states = env.observation_space.shape[1] + (1 if adv else 0)
     n_actions = env.action_space.n
     n_msg = 2
     n_hidden = 32
@@ -59,20 +62,23 @@ def train_ma_dqn(n_episodes, munchhausen=False):
     tracker = MultiTracker(n_agents=n_agents, logger=logger)
 
     dqn_models = []
-    adv_models = []
     memorys = []
-    adv_memorys = []
+
+    if adv:
+        adv_models = []
+        adv_memorys = []
 
     for _ in range(n_agents):
         dqn = DQN(n_states, n_actions, n_hidden, lr)
-        adv = AdvNet()
         memory = deque(maxlen=episodes_without_training * 1000)
-        adv_memory = deque(maxlen=episodes_without_training * 1000)
-
         dqn_models.append(dqn)
         memorys.append(memory)
-        adv_memorys.append(adv_memory)
-        adv_models.append(adv)
+
+        if adv:
+            adv = AdvNet()
+            adv_memory = deque(maxlen=episodes_without_training * 1000)       
+            adv_memorys.append(adv_memory)
+            adv_models.append(adv)
 
     for episode in range(n_episodes + episodes_without_training + episodes_only_adv):
 
@@ -90,17 +96,18 @@ def train_ma_dqn(n_episodes, munchhausen=False):
             policy = gen_epsilon_greedy_policy(dqn_models[i], epsilon, n_actions)
             policies.append(policy)
 
-            adv_policy = gen_epsilon_greedy_policy(adv_models[i], adv_epsilon, n_msg)
-            adv_policies.append(adv_policy)
+            if adv:
+                adv_policy = gen_epsilon_greedy_policy(adv_models[i], adv_epsilon, n_msg)
+                adv_policies.append(adv_policy)
 
         states = env.reset()
 
-        # ADV
-        adv_inputs = send_pos_to_other_cab(states)
-        msgs = []
-        for i in range(n_agents):
-            msgs.append(adv_policies[i](adv_inputs[i]))
-        states = add_msg_to_states(states, msgs)
+        if adv:
+            adv_inputs = send_pos_to_other_cab(states)
+            msgs = []
+            for i in range(n_agents):
+                msgs.append(adv_policies[i](adv_inputs[i]))
+            states = add_msg_to_states(states, msgs)
 
         is_done = False
         steps = 0
@@ -115,30 +122,32 @@ def train_ma_dqn(n_episodes, munchhausen=False):
 
             next_states, rewards, is_done, _ = env.step(actions)
 
-            adv_rewards = calc_adv_rewards(adv_inputs, msgs)
-
             tracker.track_reward(rewards)
             tracker.track_actions(actions)
-            tracker.track_adv_reward(adv_rewards)
 
-            # ADV
-            adv_inputs_next = send_pos_to_other_cab(next_states)
-            msgs_next = []
-            for i in range(n_agents):
-                msgs_next.append(adv_policies[i](adv_inputs[i]))
-            next_states = add_msg_to_states(next_states, msgs_next)
+            if adv:
+                adv_rewards = calc_adv_rewards(adv_inputs, msgs)
+                tracker.track_adv_reward(adv_rewards)
+
+            if adv:
+                adv_inputs_next = send_pos_to_other_cab(next_states)
+                msgs_next = []
+                for i in range(n_agents):
+                    msgs_next.append(adv_policies[i](adv_inputs[i]))
+                next_states = add_msg_to_states(next_states, msgs_next)
 
             for i in range(n_agents):
 
                 memorys[i].append(
                     (states[i], actions[i], next_states[i], rewards[i], is_done)
                 )
-
-                adv_memorys[i].append((adv_inputs[i], msgs[i], adv_rewards[i]))
+                if adv:
+                    adv_memorys[i].append((adv_inputs[i], msgs[i], adv_rewards[i]))
 
                 if episode > episodes_without_training and steps % 10 == 0:
 
-                    adv_models[i].replay(adv_memorys[i], replay_size)
+                    if adv:
+                        adv_models[i].replay(adv_memorys[i], replay_size)
 
                     if episode > (episodes_without_training + episodes_only_adv):
                         if munchhausen:
@@ -149,14 +158,17 @@ def train_ma_dqn(n_episodes, munchhausen=False):
                             dqn_models[i].replay(memorys[i], replay_size, gamma)
 
             if is_done:
+                adv_rewards = f'ADV {tracker.adv_episode_rewards}' if adv else ''
                 print(
-                    f"Episode: {episode} Reward: {tracker.get_rewards()} Passengers {tracker.get_pick_ups()} Do-nothing {tracker.get_do_nothing()} ADV {tracker.adv_episode_rewards}"
+                    f"Episode: {episode} Reward: {tracker.get_rewards()} Passengers {tracker.get_pick_ups()} Do-nothing {tracker.get_do_nothing()} {adv_rewards}"
                 )
                 break
 
             states = next_states
-            adv_inputs = adv_inputs_next
-            msgs = msgs_next
+
+            if adv:
+                adv_inputs = adv_inputs_next
+                msgs = msgs_next
 
         if episode > episodes_without_training:
             adv_epsilon = max(adv_epsilon * adv_epsilon_decay, 0.01)
@@ -169,18 +181,19 @@ def train_ma_dqn(n_episodes, munchhausen=False):
 
     for i in range(n_agents):
         dqn_models[i].save_model(log_path, number=str(i + 1))
-        adv_models[i].save_model(log_path, number=str(i + 1))
+        if adv:
+            adv_models[i].save_model(log_path, number=str(i + 1))
 
     tracker.plot(log_path)
 
 
-def deploy_ma_dqn(n_episodes, wait):
+def deploy_ma_dqn(n_episodes, wait, adv=False):
 
     env_name = "Cabworld-v1"
     env = gym.make(env_name)
 
     n_agents = env.observation_space.shape[0]
-    n_states = env.observation_space.shape[1] + 1
+    n_states = env.observation_space.shape[1] + (1 if adv else 0)
     n_actions = env.action_space.n
     n_hidden = 32
 
@@ -196,22 +209,24 @@ def deploy_ma_dqn(n_episodes, wait):
     for i in range(n_agents):
         dqn = DQN(n_states, n_actions, n_hidden)
         dqn_models.append(dqn)
-        adv = AdvNet()
-        adv_models.append(adv)
         current_model = os.path.join(current_folder, "dqn" + str(i + 1) + ".pth")
-        current_adv_model = os.path.join(current_folder, "adv" + str(i + 1) + ".pth")
         dqn_models[i].load_model(current_model)
-        adv_models[i].load_model(current_adv_model)
+
+        if adv:
+            adv = AdvNet()
+            adv_models.append(adv)
+            current_adv_model = os.path.join(current_folder, "adv" + str(i + 1) + ".pth")
+            adv_models[i].load_model(current_adv_model)
 
     for _ in range(n_episodes):
         states = env.reset()
 
-        # ADV
-        adv_inputs = send_pos_to_other_cab(states)
-        msgs = []
-        for i in range(n_agents):
-            msgs.append(adv_models[i].deploy((adv_inputs[i])))
-        states = add_msg_to_states(states, msgs)
+        if adv:
+            adv_inputs = send_pos_to_other_cab(states)
+            msgs = []
+            for i in range(n_agents):
+                msgs.append(adv_models[i].deploy((adv_inputs[i])))
+            states = add_msg_to_states(states, msgs)
 
         episode_reward = 0
         done = False
@@ -219,12 +234,12 @@ def deploy_ma_dqn(n_episodes, wait):
             actions = [dqn.deploy(state) for dqn, state in zip(dqn_models, states)]
             states, rewards, done, _ = env.step(actions)
 
-            # ADV
-            adv_inputs = send_pos_to_other_cab(states)
-            msgs = []
-            for i in range(n_agents):
-                msgs.append(adv_models[i].deploy((adv_inputs[i])))
-            states = add_msg_to_states(states, msgs)
+            if adv:
+                adv_inputs = send_pos_to_other_cab(states)
+                msgs = []
+                for i in range(n_agents):
+                    msgs.append(adv_models[i].deploy((adv_inputs[i])))
+                states = add_msg_to_states(states, msgs)
 
             episode_reward += sum(rewards)
             env.render()

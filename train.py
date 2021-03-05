@@ -24,6 +24,14 @@ parser.add_argument(
     required=False,
     help="Munchhausen add-on for DQN",
 )
+parser.add_argument(
+    "-adv",
+    "--advice",
+    type=bool,
+    default=False,
+    required=False,
+    help="AdvNet for  MA-DQN",
+)
 args = parser.parse_args()
 
 valid_algorithms = ["ppo", "dqn", "a2c", "rand"]
@@ -37,7 +45,7 @@ elif args.algorithm == "a2c":
 elif args.algorithm == "rand":
     train_random(int(args.number))
 elif args.algorithm == "ma-dqn":
-    train_ma_dqn(int(args.number))
+    train_ma_dqn(int(args.number), munchhausen=args.munchhausen, adv=args.advice)
 elif args.algorithm == "ma-ppo":
     train_ma_ppo(int(args.number))
 else:
