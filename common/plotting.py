@@ -111,15 +111,14 @@ def plot_values(df, ids, path, double_scale=False):
 
     fig.tight_layout()
     name = "_".join(ids)
-    plt.savefig(os.path.join(path, name + ".png"))
+    plt.savefig(os.path.join(path, name + ".png"), dpi=1200)
 
 
-def plot_mult_agent(dfs, ids, path): 
+def plot_mult_agent(dfs, ids, path, labels=None): 
 
     fig, ax1 = plt.subplots()
     ax1.set_xlabel("Episodes")
 
-    
     for id in ids:
 
         color = color_dict[id]
@@ -129,20 +128,21 @@ def plot_mult_agent(dfs, ids, path):
             data = df[id]
             color = adjust_lightness(color_dict[id], amount)
             
-            mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=10)
-            ax1.plot(x, mean_rewards, color=color, label=(id + str(i)))
+            mean_metric, std_metric, x = smoothing_mean_std(data, step_size=10)
+            ax1.set_ylabel(id)
+            label = labels[i] if labels else (id + str(i))
+            ax1.plot(x, mean_metric, color=color, label=label)
             ax1.fill_between(
                 x,
-                mean_rewards + std_rewards,
-                mean_rewards - std_rewards,
+                mean_metric + std_metric,
+                mean_metric - std_metric,
                 alpha=0.2,
                 color=color,
             )
-
             amount -= (0.5/len(dfs))
 
     plt.legend(loc="best")
     fig.tight_layout()
     name = "_".join(ids)
 
-    plt.savefig(os.path.join(path, name + "_mult.png"))
+    plt.savefig(os.path.join(path, name + "_mult.png"), dpi=1200)

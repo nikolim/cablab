@@ -274,17 +274,4 @@ class MultiTracker():
         plot_mult_agent(dfs, ["do_nothing_arr", "do_nothing_opt_arr", "do_nothing_sub_arr"], log_path)
 
 
-    def plot_from_files(): 
 
-        files = ["/home/niko/Info/cablab/runs/ma-dqn/34/logs1.csv", "/home/niko/Info/cablab/runs/ma-dqn/34/logs2.csv"]
-        dfs = []
-        log_path = ""
-        ids = ["rewards"]
-
-        for file in files: 
-            df = pd.DataFrame()
-            df.read_csv(file)
-            dfs.append(df)
-
-        plot_mult_agent(dfs, ids, log_path)
-        
