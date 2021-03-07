@@ -58,17 +58,15 @@ def calc_shorter_way(states):
     return one_hot
 
 
-# def add_msg_to_states(states):
-#
-#     new_states = []
-#     one_hot_msg = calc_shorter_way(states)
-#
-#     for state, msg in zip(states, one_hot_msg):
-#         state_arr = list(state)
-#         state_arr.append(msg)
-#         new_states.append(tuple(state_arr))
-#
-#     return new_states
+def add_fixed_msg_to_states(states):
+    new_states = []
+    one_hot_msg = calc_shorter_way(states)
+
+    for state, msg in zip(states, one_hot_msg[::-1]):
+        state_arr = list(state)
+        state_arr.append(msg)
+        new_states.append(tuple(state_arr))
+    return new_states
 
 
 def send_pos_to_other_cab(states):
@@ -132,3 +130,12 @@ def calc_adv_rewards(adv_inputs, msgs):
         rewards.append(reward)
 
     return rewards
+
+
+def extend_single_agent_state(state):
+    extended_state = list(state)
+    if (state[4] == 0 and state[7] != -1 and state[8] != -1) or (state[4] == 1):
+        extended_state.append(0)
+    else:
+        extended_state.append(1)
+    return tuple(extended_state)

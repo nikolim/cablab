@@ -28,7 +28,8 @@ def create_logger(path):
     LOG_FORMAT = "%(message)s"
     file_name = os.path.join(path, "logs.log")
     open(file_name, "w+")
-    logging.basicConfig(format=LOG_FORMAT, level=logging.INFO, filename=file_name)
+    logging.basicConfig(format=LOG_FORMAT,
+                        level=logging.INFO, filename=file_name)
     logger = logging.getLogger("cablab")
     return logger
 
@@ -191,15 +192,15 @@ class Tracker:
         df.to_csv(file_name)
 
         plot_values(df, ["rewards"], log_path)
-        plot_values(df, ["rewards", "n_passengers"], log_path, double_scale=True)
-        plot_values(df, ["rewards", "illegal_pick_ups", "illegal_moves"], log_path)
+        plot_values(df, ["n_passengers"], log_path)
         plot_values(
-            df, ["do_nothing_arr", "do_nothing_opt_arr", "do_nothing_sub_arr"], log_path
+            df, ["illegal_pick_ups", "illegal_moves"], log_path, double_scale=True
         )
+        plot_values(df, ["do_nothing_opt_arr", "do_nothing_sub_arr"], log_path)
         plot_values(df, ["rewards", "epsilon"], log_path, double_scale=True)
 
 
-class MultiTracker():
+class MultiTracker:
     def __init__(self, n_agents, logger=None):
 
         self.n_agents = n_agents
@@ -208,70 +209,79 @@ class MultiTracker():
         self.adv_episode_rewards = [0] * self.n_agents
 
         # storage for all episodes
-        for i in (range(n_agents)): 
+        for i in range(n_agents):
             tracker = Tracker(logger)
             self.trackers.append(tracker)
-        
+
         self.init_episode_vars()
 
     def init_episode_vars(self):
         # storage for one episode
 
-        for tracker in self.trackers: 
+        for tracker in self.trackers:
             tracker.init_episode_vars()
 
     def new_episode(self):
 
         self.adv_rewards.append(self.adv_episode_rewards)
 
-        for tracker in self.trackers: 
+        for tracker in self.trackers:
             tracker.new_episode()
-        
+
         self.adv_episode_rewards = [0] * self.n_agents
-            
+
     def track_reward(self, rewards):
         for i, tracker in enumerate(self.trackers):
-            tracker.track_reward(rewards[i]) 
+            tracker.track_reward(rewards[i])
 
     def track_adv_reward(self, rewards):
         for i in range(len(rewards)):
             self.adv_episode_rewards[i] += rewards[i]
 
     def track_actions(self, actions):
-       for i, tracker in enumerate(self.trackers):
-            tracker.track_reward(actions[i]) 
+        for i, tracker in enumerate(self.trackers):
+            tracker.track_reward(actions[i])
 
     def track_epsilon(self, epsilon):
-       for i, tracker in enumerate(self.trackers):
-            tracker.track_epsilon(epsilon) 
+        for i, tracker in enumerate(self.trackers):
+            tracker.track_epsilon(epsilon)
 
     def get_pick_ups(self):
         pick_ups = [tracker.get_pick_ups() for tracker in self.trackers]
         return pick_ups
 
-    def get_rewards(self): 
+    def get_rewards(self):
         rewards = [tracker.episode_reward for tracker in self.trackers]
         return rewards
 
-    def get_do_nothing(self): 
+    def get_do_nothing(self):
         do_nothing = [tracker.do_nothing for tracker in self.trackers]
         return do_nothing
 
     def plot(self, log_path):
 
         dfs = []
-        for i, tracker in enumerate(self.trackers): 
+        for i, tracker in enumerate(self.trackers):
             df = pd.DataFrame()
             for value in total_values:
                 df[value] = tracker.total_values_dict[value]
             dfs.append(df)
-            file_name = os.path.join(log_path, "logs" + str(i+1) + ".csv")
+            file_name = os.path.join(log_path, "logs" + str(i + 1) + ".csv")
             df.to_csv(file_name)
+
+        summed_df = dfs[0]
+        values_to_add = ['illegal_pick_ups', 'illegal_moves', 'n_passengers', 'rewards', 'mean_pick_up_path',
+                         'mean_drop_off_path', 'do_nothing_arr', 'do_nothing_opt_arr', 'do_nothing_sub_arr']
+
+        for value in values_to_add: 
+            summed_df[value] = dfs[0][value] + dfs[1][value]        
+
+        file_name = os.path.join(log_path, "logs_summed.csv")
+        summed_df.to_csv(file_name)
 
         plot_mult_agent(dfs, ["rewards"], log_path)
         plot_mult_agent(dfs, ["n_passengers"], log_path)
-        plot_mult_agent(dfs, ["rewards", "illegal_pick_ups", "illegal_moves"], log_path)
-        plot_mult_agent(dfs, ["do_nothing_arr", "do_nothing_opt_arr", "do_nothing_sub_arr"], log_path)
-
-
-
+        plot_mult_agent(dfs, ["illegal_pick_ups", "illegal_moves"], log_path)
+        plot_mult_agent(dfs, ["do_nothing_opt_arr"], log_path)
+        plot_mult_agent(dfs, ["do_nothing_opt_arr",
+                              "do_nothing_sub_arr"], log_path)

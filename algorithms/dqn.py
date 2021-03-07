@@ -12,13 +12,13 @@ import gym_cabworld
 from algorithms.dqn_model import DQN, gen_epsilon_greedy_policy
 from common.logging import create_log_folder, create_logger, get_last_folder
 from common.logging import Tracker
-
+from common.features import extend_single_agent_state
 
 # Fill buffer
-episodes_without_training = 100
+episodes_without_training = 200
 
 
-def train_dqn(n_episodes, munchhausen=False):
+def train_dqn(n_episodes, munchhausen=False, extended=True):
 
     disp = Display()
     disp.start()
@@ -26,16 +26,16 @@ def train_dqn(n_episodes, munchhausen=False):
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    n_states = env.observation_space.shape[1]
+    n_states = env.observation_space.shape[1] + (1 if extended else 0)
     n_actions = env.action_space.n
-    n_hidden = 32
+    n_hidden = 64
 
     lr = 0.001
     gamma = 0.975
     epsilon = 1
     epsilon_decay = 0.9975
     replay_size = 100
-    target_update = 5
+    target_update = 50
 
     log_path = create_log_folder("dqn")
     logger = create_logger(log_path)
@@ -55,6 +55,8 @@ def train_dqn(n_episodes, munchhausen=False):
         policy = gen_epsilon_greedy_policy(dqn, epsilon, n_actions)
         state = env.reset()
 
+        state = extend_single_agent_state(state) if extended else state
+
         is_done = False
         steps = 0
 
@@ -68,6 +70,9 @@ def train_dqn(n_episodes, munchhausen=False):
             tracker.track_actions(state, action)
 
             next_state, reward, is_done, _ = env.step(action)
+            next_state = (
+                extend_single_agent_state(next_state) if extended else next_state
+            )
             tracker.track_reward(reward)
             memory.append((state, action, next_state, reward, is_done))
 
@@ -89,7 +94,7 @@ def train_dqn(n_episodes, munchhausen=False):
             state = next_state
 
         if episode > episodes_without_training:
-            epsilon = max(epsilon * epsilon_decay, 0.01)
+            epsilon = max(epsilon * epsilon_decay, 0.05)
 
         if episode > 0:
             tracker.track_epsilon(epsilon)
@@ -98,14 +103,14 @@ def train_dqn(n_episodes, munchhausen=False):
     tracker.plot(log_path)
 
 
-def deploy_dqn(n_episodes, wait):
+def deploy_dqn(n_episodes, wait, extended=True):
 
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    n_states = env.observation_space.shape[1]
+    n_states = env.observation_space.shape[1] + (1 if extended else 0)
     n_actions = env.action_space.n
-    n_hidden = 32
+    n_hidden = 64
 
     dqn = DQN(n_states, n_actions, n_hidden)
 
@@ -119,11 +124,13 @@ def deploy_dqn(n_episodes, wait):
 
     for _ in range(n_episodes):
         state = env.reset()
+        state = extend_single_agent_state(state) if extended else state
         episode_reward = 0
         done = False
         while not done:
             action = dqn.deploy(state)
             state, reward, done, _ = env.step(action)
+            state = extend_single_agent_state(state) if extended else state
             episode_reward += reward
             env.render()
             time.sleep(wait)

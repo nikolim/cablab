@@ -46,7 +46,7 @@ def train_ppo(n_episodes):
             memory.is_terminal.append(done)
 
             if done:
-                mean_entropy = ppo.update(memory, episode)
+                ppo.update(memory, episode)
                 memory.clear()
                 print(
                     f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"

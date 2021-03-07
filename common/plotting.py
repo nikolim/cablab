@@ -32,6 +32,8 @@ OPT_PICK_UP_COLOR = "olive"
 # Seaborn backend
 sns.set()
 
+plt.figure(dpi=1200)
+
 
 def adjust_lightness(color, amount=0.5):
     try:
@@ -114,7 +116,7 @@ def plot_values(df, ids, path, double_scale=False):
     plt.savefig(os.path.join(path, name + ".png"), dpi=1200)
 
 
-def plot_mult_agent(dfs, ids, path, labels=None): 
+def plot_mult_agent(dfs, ids, path, labels=None):
 
     fig, ax1 = plt.subplots()
     ax1.set_xlabel("Episodes")
@@ -124,10 +126,10 @@ def plot_mult_agent(dfs, ids, path, labels=None):
         color = color_dict[id]
         amount = 1
 
-        for i,df in enumerate(dfs):
+        for i, df in enumerate(dfs):
             data = df[id]
             color = adjust_lightness(color_dict[id], amount)
-            
+
             mean_metric, std_metric, x = smoothing_mean_std(data, step_size=10)
             ax1.set_ylabel(id)
             label = labels[i] if labels else (id + str(i))
@@ -139,7 +141,7 @@ def plot_mult_agent(dfs, ids, path, labels=None):
                 alpha=0.2,
                 color=color,
             )
-            amount -= (0.5/len(dfs))
+            amount -= 0.5 / len(dfs)
 
     plt.legend(loc="best")
     fig.tight_layout()
