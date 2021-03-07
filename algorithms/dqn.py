@@ -39,8 +39,18 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
 
     log_path = create_log_folder("dqn")
     logger = create_logger(log_path)
-    tracker = Tracker()
+    tracker = Tracker(logger)
 
+    tracker.write_to_log("Epsiodes " + str(n_episodes))
+    tracker.write_to_log("Episodes without training " + str(episodes_without_training))
+    tracker.write_to_log("Hidden neurons " + str(n_hidden))
+    tracker.write_to_log("Learning Rate " + str(lr))
+    tracker.write_to_log("Gamma " + str(gamma))
+    tracker.write_to_log("Epsilon initial  " + str(epsilon))
+    tracker.write_to_log("Epsilon decay " + str(epsilon_decay))
+    tracker.write_to_log("Replay size " + str(replay_size))
+    tracker.write_to_log("Target update " + str(target_update))
+    
     dqn = DQN(n_states, n_actions, n_hidden, lr)
 
     memory = deque(maxlen=episodes_without_training * 1000)

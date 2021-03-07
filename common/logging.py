@@ -77,6 +77,10 @@ class Tracker:
 
         self.eps_counter = 0
         self.init_episode_vars()
+    
+    def write_to_log(self, str): 
+        if self.logger: 
+            logging.info(str)
 
     def init_episode_vars(self):
 
@@ -98,10 +102,6 @@ class Tracker:
     def new_episode(self):
 
         if self.eps_counter > 0:
-            if self.logger:
-                logging.info(
-                    f"Episode:{self.eps_counter} Reward: {self.episode_reward} Passengers: {self.pick_ups // 2}"
-                )
             self.total_values_dict["rewards"] = np.append(
                 self.total_values_dict["rewards"], self.episode_reward
             )
@@ -203,6 +203,11 @@ class Tracker:
 class MultiTracker:
     def __init__(self, n_agents, logger=None):
 
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = False
+
         self.n_agents = n_agents
         self.trackers = []
         self.adv_rewards = []
@@ -214,6 +219,10 @@ class MultiTracker:
             self.trackers.append(tracker)
 
         self.init_episode_vars()
+
+    def write_to_log(self, str): 
+        if self.logger: 
+            logging.info(str)
 
     def init_episode_vars(self):
         # storage for one episode
@@ -278,6 +287,7 @@ class MultiTracker:
 
         file_name = os.path.join(log_path, "logs_summed.csv")
         summed_df.to_csv(file_name)
+
 
         plot_mult_agent(dfs, ["rewards"], log_path)
         plot_mult_agent(dfs, ["n_passengers"], log_path)

@@ -24,13 +24,12 @@ from common.logging import create_log_folder, create_logger, get_last_folder
 from common.logging import MultiTracker
 
 # Fill buffer
-episodes_without_training = 100
+episodes_without_training = 200
 
 # ADV = calculated communication with fixed protocoll
 # COMM = predefined communication
 
-
-def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
+def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=True):
 
     disp = Display()
     disp.start()
@@ -50,7 +49,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
     n_states = env.observation_space.shape[1] + (1 if (adv or comm) else 0)
     n_actions = env.action_space.n
     n_msg = 2
-    n_hidden = 32
+    n_hidden = 64
 
     lr = 0.001
     gamma = 0.975
@@ -60,11 +59,24 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
     adv_epsilon_decay = 0.99
 
     replay_size = 100
-    target_update = 5
+    target_update = 50
 
     log_path = create_log_folder("ma-dqn")
     logger = create_logger(log_path)
     tracker = MultiTracker(n_agents=n_agents, logger=logger)
+
+    tracker.write_to_log("Epsiodes " + str(n_episodes))
+    tracker.write_to_log("Episodes without training " + str(episodes_without_training))
+    tracker.write_to_log("Munchhausen " + str(munchhausen))
+    tracker.write_to_log("Predefined communication " + str(comm))
+    tracker.write_to_log("Adv communication " + str(adv))
+    tracker.write_to_log("Hidden neurons " + str(n_hidden))
+    tracker.write_to_log("Learning Rate " + str(lr))
+    tracker.write_to_log("Gamma " + str(gamma))
+    tracker.write_to_log("Epsilon initial  " + str(epsilon))
+    tracker.write_to_log("Epsilon decay " + str(epsilon_decay))
+    tracker.write_to_log("Replay size " + str(replay_size))
+    tracker.write_to_log("Target update " + str(target_update))
 
     dqn_models = []
     memorys = []
@@ -189,7 +201,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
             adv_epsilon = max(adv_epsilon * adv_epsilon_decay, 0.01)
 
         if episode > (episodes_without_training + episodes_only_adv):
-            epsilon = max(epsilon * epsilon_decay, 0.01)
+            epsilon = max(epsilon * epsilon_decay, 0.05)
 
         if episode > 0:
             tracker.track_epsilon(epsilon)
@@ -210,9 +222,9 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False):
     n_agents = env.observation_space.shape[0]
     n_states = env.observation_space.shape[1] + (1 if (adv or comm) else 0)
     n_actions = env.action_space.n
-    n_hidden = 32
+    n_hidden = 64
 
-    # current_folder = get_last_folder("dqn")
+    #current_folder = get_last_folder("dqn")
     current_folder = get_last_folder("ma-dqn")
     if not current_folder:
         print("No model")
