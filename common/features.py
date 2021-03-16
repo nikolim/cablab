@@ -45,7 +45,6 @@ def calc_shorter_way(states):
         return round(
             math.sqrt((state[5] - state[7]) ** 2 + (state[6] - state[8]) ** 2), 2
         )
-
     distances = [calc_distance(state) for state in states]
     one_hot = [1 if dist == min(distances) else 0 for dist in distances]
 
@@ -134,8 +133,8 @@ def calc_adv_rewards(adv_inputs, msgs):
 
 def extend_single_agent_state(state):
     extended_state = list(state)
-    if (state[4] == 0 and state[7] != -1 and state[8] != -1) or (state[4] == 1):
-        extended_state.append(0)
-    else:
+    if (state[4] == -1 and state[7] != -1 and state[8] != -1):
         extended_state.append(1)
+    else:
+        extended_state.append(0)
     return tuple(extended_state)

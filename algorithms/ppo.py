@@ -17,11 +17,11 @@ def train_ppo(n_episodes):
 
     Display().start()
 
-    env_name = "Cabworld-v0"
+    env_name = "Farmworld-v0"
     env = gym.make(env_name)
 
     n_states = env.observation_space.shape[1]
-    n_actions = env.action_space.n
+    n_actions = env.action_space.n - 1
     max_timesteps = 1000
 
     log_path = create_log_folder("ppo")

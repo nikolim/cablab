@@ -4,7 +4,6 @@ from algorithms.ppo import train_ppo
 from algorithms.dqn import train_dqn
 from algorithms.a2c import train_a2c
 from algorithms.random_policy import train_random
-
 from algorithms.ma_dqn import train_ma_dqn
 from algorithms.ma_ppo import train_ma_ppo
 
@@ -50,12 +49,12 @@ valid_algorithms = ["ppo", "dqn", "a2c", "rand"]
 
 if args.algorithm == "ppo":
     train_ppo(int(args.number))
-elif args.algorithm == "dqn":
+if args.algorithm == "dqn":
     train_dqn(int(args.number), munchhausen=args.munchhausen)
 elif args.algorithm == "a2c":
     train_a2c(int(args.number))
 elif args.algorithm == "rand":
-    train_random(int(args.number))
+   train_random(int(args.number))
 elif args.algorithm == "ma-dqn":
     train_ma_dqn(
         int(args.number),

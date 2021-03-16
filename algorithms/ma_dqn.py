@@ -24,12 +24,12 @@ from common.logging import create_log_folder, create_logger, get_last_folder
 from common.logging import MultiTracker
 
 # Fill buffer
-episodes_without_training = 200
+episodes_without_training = 500
 
 # ADV = calculated communication with fixed protocoll
 # COMM = predefined communication
 
-def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=True):
+def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
 
     disp = Display()
     disp.start()
@@ -41,7 +41,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=True):
 
     if adv:
         assert n_agents == 2  # ADVNET
-        episodes_only_adv = 10
+        episodes_only_adv = 500
     else:
         episodes_only_adv = 0
 
@@ -140,12 +140,16 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=True):
 
             actions = []
             for i in range(n_agents):
-                actions.append(policies[i](states[i]))
+                # also remove tag
+                state = list(states[i])
+                #state[-1] = 0
+                state = tuple(state)
+                actions.append(policies[i](state))
 
             next_states, rewards, is_done, _ = env.step(actions)
 
             tracker.track_reward(rewards)
-            tracker.track_actions(actions)
+            tracker.track_actions(states, actions, comm=(comm or adv))
 
             if adv:
                 adv_rewards = calc_adv_rewards(adv_inputs, msgs)
@@ -162,11 +166,20 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=True):
 
             for i in range(n_agents):
 
+                # artificial set last entry to zero after tracking
+                state = list(states[i])
+                #state[-1] = 0
+                state = tuple(state)
+
+                next_state = list(next_states[i])
+                #next_state[-1] = 0
+                next_state = tuple(next_state)
+
                 memorys[i].append(
-                    (states[i], actions[i],
-                     next_states[i], rewards[i], is_done)
+                    (state, actions[i],
+                     next_state, rewards[i], is_done)
                 )
-                if adv:
+                if adv: 
                     adv_memorys[i].append(
                         (adv_inputs[i], msgs[i], adv_rewards[i]))
 
@@ -189,6 +202,13 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=True):
                 print(
                     f"Episode: {episode} Reward: {tracker.get_rewards()} Passengers {tracker.get_pick_ups()} Do-nothing {tracker.get_do_nothing()} {adv_rewards}"
                 )
+
+                # selective pops
+                for i, pick_ups in enumerate(tracker.get_pick_ups()): 
+                    if pick_ups < 1: 
+                        for _ in range(1000): 
+                            memorys[i].pop()
+                
                 break
 
             states = next_states
@@ -201,7 +221,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=True):
             adv_epsilon = max(adv_epsilon * adv_epsilon_decay, 0.01)
 
         if episode > (episodes_without_training + episodes_only_adv):
-            epsilon = max(epsilon * epsilon_decay, 0.05)
+            epsilon = max(epsilon * epsilon_decay, 0.01)
 
         if episode > 0:
             tracker.track_epsilon(epsilon)
@@ -214,15 +234,21 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=True):
     tracker.plot(log_path)
 
 
-def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False):
+def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=False):
 
     env_name = "Cabworld-v1"
     env = gym.make(env_name)
+
+    if not render: 
+        disp = Display()
+        disp.start()
 
     n_agents = env.observation_space.shape[0]
     n_states = env.observation_space.shape[1] + (1 if (adv or comm) else 0)
     n_actions = env.action_space.n
     n_hidden = 64
+
+    tracker = MultiTracker(n_agents=n_agents)
 
     #current_folder = get_last_folder("dqn")
     current_folder = get_last_folder("ma-dqn")
@@ -238,6 +264,7 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False):
         dqn_models.append(dqn)
         current_model = os.path.join(
             current_folder, "dqn" + str(i + 1) + ".pth")
+        #current_model = "/home/niko/Info/cablab/runs/dqn/148/dqn.pth"
         dqn_models[i].load_model(current_model)
 
         if adv:
@@ -248,7 +275,9 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False):
             )
             adv_models[i].load_model(current_adv_model)
 
-    for _ in range(n_episodes):
+    for episode in range(n_episodes):
+
+        tracker.new_episode()
         states = env.reset()
 
         if adv:
@@ -260,13 +289,15 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False):
         elif comm:
             states = add_fixed_msg_to_states(states)
 
-        episode_reward = 0
         done = False
         while not done:
             actions = [dqn.deploy(state)
                        for dqn, state in zip(dqn_models, states)]
             states, rewards, done, _ = env.step(actions)
 
+            tracker.track_reward(rewards)
+            tracker.track_actions(states, actions, comm=comm)
+            
             if adv:
                 adv_inputs = send_pos_to_other_cab(states)
                 msgs = []
@@ -276,9 +307,17 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False):
             elif comm:
                 states = add_fixed_msg_to_states(states)
 
-            episode_reward += sum(rewards)
-            env.render()
-            time.sleep(wait)
+            if render:
+                env.render()
+            if render:
+                time.sleep(wait)
             if done:
-                print(f"Reward {episode_reward}")
+                print(
+                    f"Episode: {episode} Reward: {tracker.get_rewards()} Passengers {tracker.get_pick_ups()} Do-nothing {tracker.get_do_nothing()}"
+                )
                 break
+
+        if episode > 0:
+                tracker.track_epsilon(0.01)
+
+    

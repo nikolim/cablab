@@ -15,7 +15,7 @@ from common.logging import Tracker
 from common.features import extend_single_agent_state
 
 # Fill buffer
-episodes_without_training = 200
+episodes_without_training = 500
 
 
 def train_dqn(n_episodes, munchhausen=False, extended=True):
@@ -27,7 +27,7 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
     env = gym.make(env_name)
 
     n_states = env.observation_space.shape[1] + (1 if extended else 0)
-    n_actions = env.action_space.n
+    n_actions = env.action_space.n 
     n_hidden = 64
 
     lr = 0.001
@@ -104,7 +104,7 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
             state = next_state
 
         if episode > episodes_without_training:
-            epsilon = max(epsilon * epsilon_decay, 0.05)
+            epsilon = max(epsilon * epsilon_decay, 0.01)
 
         if episode > 0:
             tracker.track_epsilon(epsilon)

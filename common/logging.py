@@ -59,6 +59,7 @@ total_values = [
     "do_nothing_arr",
     "do_nothing_opt_arr",
     "do_nothing_sub_arr",
+    "useless_steps"
 ]
 
 
@@ -94,6 +95,7 @@ class Tracker:
         self.do_nothing = 0
         self.do_nothing_opt = 0
         self.do_nothing_sub = 0
+        self.useless_steps = 0
 
         self.passenger = False
         self.pick_up_drop_off_steps = []
@@ -123,6 +125,9 @@ class Tracker:
             self.total_values_dict["do_nothing_sub_arr"] = np.append(
                 self.total_values_dict["do_nothing_sub_arr"], self.do_nothing_sub
             )
+            self.total_values_dict["useless_steps"] = np.append(
+                self.total_values_dict["useless_steps"], self.useless_steps
+            )
 
             if len(self.drop_off_pick_up_steps) > 0:
                 self.total_values_dict["mean_pick_up_path"] = np.append(
@@ -149,14 +154,13 @@ class Tracker:
             self.illegal_moves_ep += 1
         if reward == -10:
             self.illegal_pick_up_ep += 1
-        if reward == 100:
+        if reward == 25:
             if self.passenger:
                 self.drop_off_pick_up_steps.append(self.no_passenger_steps)
                 self.no_passenger_steps = 0
             else:
                 self.pick_up_drop_off_steps.append(self.passenger_steps)
                 self.passenger_steps = 0
-
             self.passenger = not self.passenger
             self.pick_ups += 1
         self.episode_reward += reward
@@ -175,6 +179,10 @@ class Tracker:
                 self.do_nothing_opt += 1
             else:
                 self.do_nothing_sub += 1
+        else: 
+            if state[-1] == 1:
+                self.useless_steps += 1
+
 
     def track_epsilon(self, epsilon):
         self.total_values_dict["epsilon"] = np.append(
@@ -193,9 +201,8 @@ class Tracker:
 
         plot_values(df, ["rewards"], log_path)
         plot_values(df, ["n_passengers"], log_path)
-        plot_values(
-            df, ["illegal_pick_ups", "illegal_moves"], log_path, double_scale=True
-        )
+        plot_values(df, ["useless_steps"], log_path)
+        plot_values(df, ["illegal_pick_ups", "illegal_moves"], log_path)
         plot_values(df, ["do_nothing_opt_arr", "do_nothing_sub_arr"], log_path)
         plot_values(df, ["rewards", "epsilon"], log_path, double_scale=True)
 
@@ -247,9 +254,20 @@ class MultiTracker:
         for i in range(len(rewards)):
             self.adv_episode_rewards[i] += rewards[i]
 
-    def track_actions(self, actions):
-        for i, tracker in enumerate(self.trackers):
-            tracker.track_reward(actions[i])
+    def track_actions(self, states, actions, comm=False):
+
+        def calc_distance(state):
+            return round(
+            math.sqrt((state[5] - state[7]) ** 2 + (state[6] - state[8]) ** 2), 2
+        )
+        distances = [calc_distance(state) for state in states]
+        one_hot_arr = [1 if dist == min(distances) else 0 for dist in distances]
+
+        for action, state, tracker, one_hot in zip(actions, states, self.trackers, one_hot_arr):
+            tracker.track_actions(state, action)
+
+            if action != 6 and ((state[8] == -1 and state[7] == -1) or one_hot == 0): 
+                tracker.useless_steps += 1
 
     def track_epsilon(self, epsilon):
         for i, tracker in enumerate(self.trackers):
@@ -280,18 +298,15 @@ class MultiTracker:
 
         summed_df = dfs[0]
         values_to_add = ['illegal_pick_ups', 'illegal_moves', 'n_passengers', 'rewards', 'mean_pick_up_path',
-                         'mean_drop_off_path', 'do_nothing_arr', 'do_nothing_opt_arr', 'do_nothing_sub_arr']
-
-        for value in values_to_add: 
-            summed_df[value] = dfs[0][value] + dfs[1][value]        
-
-        file_name = os.path.join(log_path, "logs_summed.csv")
-        summed_df.to_csv(file_name)
-
+                         'mean_drop_off_path', 'do_nothing_arr', 'do_nothing_opt_arr', 'do_nothing_sub_arr', 'useless_steps']
 
         plot_mult_agent(dfs, ["rewards"], log_path)
         plot_mult_agent(dfs, ["n_passengers"], log_path)
+        plot_mult_agent(dfs, ["useless_steps"], log_path)
         plot_mult_agent(dfs, ["illegal_pick_ups", "illegal_moves"], log_path)
-        plot_mult_agent(dfs, ["do_nothing_opt_arr"], log_path)
-        plot_mult_agent(dfs, ["do_nothing_opt_arr",
-                              "do_nothing_sub_arr"], log_path)
+        plot_mult_agent(dfs, ["do_nothing_opt_arr", "do_nothing_sub_arr"], log_path)
+                            
+        for value in values_to_add: 
+            summed_df[value] = dfs[0][value] + dfs[1][value]        
+        file_name = os.path.join(log_path, "logs_summed.csv")
+        summed_df.to_csv(file_name)
