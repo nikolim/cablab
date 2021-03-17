@@ -26,7 +26,8 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    n_states = env.observation_space.shape[1] + (1 if extended else 0)
+    # n_states = env.observation_space.shape[1] + (1 if extended else 0)
+    n_states = 11
     n_actions = env.action_space.n 
     n_hidden = 64
 
@@ -65,7 +66,9 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
         policy = gen_epsilon_greedy_policy(dqn, epsilon, n_actions)
         state = env.reset()
 
-        state = extend_single_agent_state(state) if extended else state
+        tracker.save_dest_to_passengers(state)
+
+        # state = extend_single_agent_state(state) if extended else state
 
         is_done = False
         steps = 0
@@ -80,10 +83,11 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
             tracker.track_actions(state, action)
 
             next_state, reward, is_done, _ = env.step(action)
-            next_state = (
-                extend_single_agent_state(next_state) if extended else next_state
-            )
-            tracker.track_reward(reward)
+            # next_state = (
+            #     extend_single_agent_state(next_state) if extended else next_state
+            # )
+            tracker.track_reward(reward, action, state, next_state)
+
             memory.append((state, action, next_state, reward, is_done))
 
             if episode > episodes_without_training and steps % 10 == 0:
@@ -93,8 +97,14 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
                     dqn.replay(memory, replay_size, gamma)
 
             if is_done:
+                if tracker.opt_passenger > 0:
+                    ratio = round(tracker.opt_passenger/  tracker.pick_ups, 3)
+                elif tracker.pick_ups > 0: 
+                    ratio = 0
+                else: 
+                    ratio = 0.5
                 print(
-                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
+                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()} Opt: {tracker.get_opt_pick_ups()} Ratio: {ratio}"
                 )
                 if tracker.get_pick_ups() < 1:
                     for _ in range(1000):

@@ -5,6 +5,7 @@ from os.path import join
 from matplotlib.pyplot import plot
 import pandas as pd
 import numpy as np
+from scipy.signal.filter_design import _nearest_real_complex_idx
 
 from common.plotting import *
 
@@ -59,7 +60,9 @@ total_values = [
     "do_nothing_arr",
     "do_nothing_opt_arr",
     "do_nothing_sub_arr",
-    "useless_steps"
+    "useless_steps", 
+    "opt_passengers", 
+    "opt_ratio"
 ]
 
 
@@ -97,6 +100,8 @@ class Tracker:
         self.do_nothing_sub = 0
         self.useless_steps = 0
 
+        self.opt_passenger = 0
+
         self.passenger = False
         self.pick_up_drop_off_steps = []
         self.drop_off_pick_up_steps = []
@@ -114,8 +119,23 @@ class Tracker:
                 self.total_values_dict["illegal_moves"], self.illegal_moves_ep
             )
             self.total_values_dict["n_passengers"] = np.append(
-                self.total_values_dict["n_passengers"], self.pick_ups // 2
+                self.total_values_dict["n_passengers"], self.pick_ups
             )
+            self.total_values_dict["opt_passengers"] = np.append(
+                self.total_values_dict["opt_passengers"], self.opt_passenger
+            )
+
+            if self.opt_passenger > 0:
+                ratio = round(self.opt_passenger/  self.pick_ups, 3)
+            elif self.pick_ups > 0: 
+                ratio = 0
+            else: 
+                ratio = 0.5
+
+            self.total_values_dict["opt_ratio"] = np.append(
+                self.total_values_dict["opt_ratio"], ratio
+            )
+
             self.total_values_dict["do_nothing_arr"] = np.append(
                 self.total_values_dict["do_nothing_arr"], self.do_nothing
             )
@@ -149,7 +169,7 @@ class Tracker:
         self.init_episode_vars()
         self.eps_counter += 1
 
-    def track_reward(self, reward):
+    def track_reward(self, reward, action, state, next_state):
         if reward == -5:
             self.illegal_moves_ep += 1
         if reward == -10:
@@ -161,16 +181,32 @@ class Tracker:
             else:
                 self.pick_up_drop_off_steps.append(self.passenger_steps)
                 self.passenger_steps = 0
+            
             self.passenger = not self.passenger
-            self.pick_ups += 1
-        self.episode_reward += reward
+            
+            if action == 4: 
+                self.pick_ups += 1
+                idx = self.get_index_of_passenger(state)
+                if idx == 0: 
+                    self.opt_passenger += 1
+
+            if action == 5: 
+                self.save_dest_to_passengers(next_state)
+
         if self.passenger:
             self.passenger_steps += 1
         else:
             self.no_passenger_steps += 1
 
+
+        self.episode_reward += reward
+
+
     def get_pick_ups(self):
-        return self.pick_ups // 2
+        return self.pick_ups
+    
+    def get_opt_pick_ups(self): 
+        return self.opt_passenger
 
     def track_actions(self, state, action):
         if action == 6:
@@ -205,6 +241,35 @@ class Tracker:
         plot_values(df, ["illegal_pick_ups", "illegal_moves"], log_path)
         plot_values(df, ["do_nothing_opt_arr", "do_nothing_sub_arr"], log_path)
         plot_values(df, ["rewards", "epsilon"], log_path, double_scale=True)
+        plot_values(df, ["opt_ratio"], log_path)
+
+
+    def calc_distance(self, pos1, pos2): 
+        return round(math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2),3)
+
+    def save_dest_to_passengers(self, state): 
+        n_passengers = 2
+        self.dest_passengers = []        
+
+        for i in range(n_passengers):
+            self.dest_passengers.append(self.calc_distance((state[5],state[6]), (state[7 + i*2],state[8 + i*2])))
+
+    def get_index_of_passenger(self, state):
+
+        n_passengers = 2
+        idx = None
+
+        for i in range(n_passengers):
+            if state[5] == state[7+2*i] and state[6] == state[8+2*i]: 
+                idx = i
+                break
+        
+        assert idx is not None
+
+        travelled_distance = self.dest_passengers[idx]
+        self.dest_passengers.sort()
+        travalled_idx = self.dest_passengers.index(travelled_distance)
+        return travalled_idx
 
 
 class MultiTracker:
@@ -310,3 +375,4 @@ class MultiTracker:
             summed_df[value] = dfs[0][value] + dfs[1][value]        
         file_name = os.path.join(log_path, "logs_summed.csv")
         summed_df.to_csv(file_name)
+
