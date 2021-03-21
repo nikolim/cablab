@@ -17,7 +17,10 @@ color_dict = {
     "do_nothing_sub_arr": "blueviolet",
     "epsilon": "orange",
     "useless_steps": "turquoise",
-    "opt_ratio": "seagreen"
+    "opt_ratio": "seagreen",
+    "idx_zero": "gray", 
+    "idx_one": "olive",
+    "episode_loss": "black"
 }
 
 # Seaborn backend

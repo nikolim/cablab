@@ -24,7 +24,8 @@ class DQN:
         self.model_target = copy.deepcopy(self.model)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.losses = []
+
+        self.episode_loss = 0
 
         # needed for munchhausen
         self.entropy_tau = 0.03
@@ -84,6 +85,7 @@ class DQN:
         q_targets = q_targets_done + q_targets_not_done
 
         loss = mse_loss(q_values_pred, q_targets)
+        self.episode_loss += loss.item()
         loss.backward()
         self.optimizer.step()
 
@@ -125,6 +127,9 @@ class DQN:
         q_k = self.model(states)
         Q_expected = q_k.gather(1, actions)
         loss = mse_loss(Q_expected, q_targets)
+
+        self.episode_loss += loss.item()
+
         loss.backward()
         self.optimizer.step()
 

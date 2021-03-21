@@ -62,7 +62,10 @@ total_values = [
     "do_nothing_sub_arr",
     "useless_steps", 
     "opt_passengers", 
-    "opt_ratio"
+    "opt_ratio", 
+    "idx_zero", 
+    "idx_one", 
+    "episode_loss"
 ]
 
 
@@ -106,6 +109,11 @@ class Tracker:
         self.pick_up_drop_off_steps = []
         self.drop_off_pick_up_steps = []
 
+        self.psng_idx_zero = 0 
+        self.psng_idx_one = 0
+
+        self.episode_loss = 0
+
     def new_episode(self):
 
         if self.eps_counter > 0:
@@ -147,6 +155,18 @@ class Tracker:
             )
             self.total_values_dict["useless_steps"] = np.append(
                 self.total_values_dict["useless_steps"], self.useless_steps
+            )
+
+            self.total_values_dict["idx_zero"] = np.append(
+                self.total_values_dict["idx_zero"], self.psng_idx_zero
+            )
+
+            self.total_values_dict["idx_one"] = np.append(
+                self.total_values_dict["idx_one"], self.psng_idx_one
+            )
+
+            self.total_values_dict["episode_loss"] = np.append(
+                self.total_values_dict["episode_loss"], self.episode_loss
             )
 
             if len(self.drop_off_pick_up_steps) > 0:
@@ -242,6 +262,9 @@ class Tracker:
         plot_values(df, ["do_nothing_opt_arr", "do_nothing_sub_arr"], log_path)
         plot_values(df, ["rewards", "epsilon"], log_path, double_scale=True)
         plot_values(df, ["opt_ratio"], log_path)
+        plot_values(df, ["n_passengers", "idx_zero", "idx_one"], log_path)
+        plot_values(df, ["episode_loss"], log_path)
+
 
 
     def calc_distance(self, pos1, pos2): 
@@ -265,11 +288,19 @@ class Tracker:
                 break
         
         assert idx is not None
+        
+        if idx == 0: 
+            self.psng_idx_zero += 1 
+        else: 
+            self.psng_idx_one += 1
 
         travelled_distance = self.dest_passengers[idx]
         self.dest_passengers.sort()
         travalled_idx = self.dest_passengers.index(travelled_distance)
         return travalled_idx
+    
+    def track_loss(self,loss): 
+        self.episode_loss = loss
 
 
 class MultiTracker:

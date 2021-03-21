@@ -15,7 +15,7 @@ from common.logging import Tracker
 from common.features import extend_single_agent_state
 
 # Fill buffer
-episodes_without_training = 500
+episodes_without_training = 2000
 
 
 def train_dqn(n_episodes, munchhausen=False, extended=True):
@@ -28,13 +28,13 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
 
     # n_states = env.observation_space.shape[1] + (1 if extended else 0)
     n_states = 11
-    n_actions = env.action_space.n 
+    n_actions = env.action_space.n - 1
     n_hidden = 64
 
     lr = 0.001
-    gamma = 0.975
+    gamma = 0.8
     epsilon = 1
-    epsilon_decay = 0.9975
+    epsilon_decay = 0.9985
     replay_size = 100
     target_update = 50
 
@@ -59,6 +59,7 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
     for episode in range(n_episodes + episodes_without_training):
 
         tracker.new_episode()
+        dqn.episode_loss = 0
 
         if episode % target_update == 0:
             dqn.copy_target()
@@ -88,6 +89,7 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
             # )
             tracker.track_reward(reward, action, state, next_state)
 
+            reward = 100 if reward == 25 else reward
             memory.append((state, action, next_state, reward, is_done))
 
             if episode > episodes_without_training and steps % 10 == 0:
@@ -103,13 +105,14 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
                     ratio = 0
                 else: 
                     ratio = 0.5
-                print(
-                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()} Opt: {tracker.get_opt_pick_ups()} Ratio: {ratio}"
-                )
-                if tracker.get_pick_ups() < 1:
+                #print(
+                #    f"Episode: {episode} Reward: {tracker.episode_reward} PSNG {tracker.get_opt_pick_ups()} IDX0 {tracker.psng_idx_zero} IDX1 {tracker.psng_idx_one}"
+                #)
+                print(f"Episode: {episode} Reward: {tracker.episode_reward} Loss {dqn.episode_loss} IDX0 {tracker.psng_idx_zero} IDX1 {tracker.psng_idx_one}")
+                if tracker.psng_idx_zero < 1 or tracker.psng_idx_one < 1:
                     for _ in range(1000):
                         memory.pop()
-
+                tracker.track_loss(dqn.episode_loss)
                 break
             state = next_state
 
@@ -123,12 +126,13 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
     tracker.plot(log_path)
 
 
-def deploy_dqn(n_episodes, wait, extended=True):
+def deploy_dqn(n_episodes, wait, extended=False):
 
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    n_states = env.observation_space.shape[1] + (1 if extended else 0)
+    # n_states = env.observation_space.shape[1] + (1 if extended else 0)
+    n_states = 11
     n_actions = env.action_space.n
     n_hidden = 64
 
