@@ -17,11 +17,11 @@ def train_ppo(n_episodes):
 
     Display().start()
 
-    env_name = "Farmworld-v0"
+    env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
     n_states = env.observation_space.shape[1]
-    n_actions = env.action_space.n - 1
+    n_actions = env.action_space.n
     max_timesteps = 1000
 
     log_path = create_log_folder("ppo")
@@ -35,12 +35,15 @@ def train_ppo(n_episodes):
         tracker.new_episode()
         state = env.reset()
 
+        tracker.save_dest_to_passengers(state)
+
         for _ in range(max_timesteps):
 
             action = ppo.policy_old.act(state, memory)
+            tracker.track_actions(state, action)
             old_state = state
             state, reward, done, _ = env.step(action)
-            tracker.track_reward(reward)
+            tracker.track_reward(reward, action, old_state, state)
 
             memory.rewards.append(reward)
             memory.is_terminal.append(done)

@@ -138,3 +138,27 @@ def extend_single_agent_state(state):
     else:
         extended_state.append(0)
     return tuple(extended_state)
+
+def calc_psng_commit(states): 
+    n_passenger = 2
+    distances = []
+    for state in states: 
+        psng_dist = []
+        for i in range(n_passenger):
+             psng_dist.append(round(math.sqrt((state[5] - state[7+2*i]) ** 2 + (state[6] - state[8+2*i]) ** 2), 2))
+        distances.append(psng_dist)
+    
+    combo_one = distances[0][0] + distances[1][1]
+    combo_two = distances[0][1] + distances[1][0]
+
+    if combo_one <= combo_two: 
+        msgs = [0,1]
+    else: 
+        msgs = [1,0]
+
+    s1 = tuple(list(states[0]).append(msgs[0]))
+    s2 = tuple(list(states[1]).append(msgs[1]))
+
+    return [s1,s2]
+
+
