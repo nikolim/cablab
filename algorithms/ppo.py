@@ -17,10 +17,11 @@ def train_ppo(n_episodes):
 
     Display().start()
 
-    env_name = "Farmworld-v0"
+    env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    n_states = env.observation_space.shape[1]
+    #n_states = env.observation_space.shape[1]
+    n_states = 11
     n_actions = env.action_space.n - 1
     max_timesteps = 1000
 
@@ -46,7 +47,8 @@ def train_ppo(n_episodes):
             memory.is_terminal.append(done)
 
             if done:
-                ppo.update(memory, episode)
+                if tracker.get_pick_ups() > 0:
+                    ppo.update(memory, episode)
                 memory.clear()
                 print(
                     f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
@@ -62,7 +64,8 @@ def deploy_ppo(n_episodes, wait):
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    n_states = env.observation_space.shape[1]
+    #n_states = env.observation_space.shape[1]
+    n_states = 11
     n_actions = env.action_space.n
 
     ppo = PPO(n_state=n_states, n_actions=n_actions)
