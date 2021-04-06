@@ -59,7 +59,9 @@ total_values = [
     "do_nothing_arr",
     "do_nothing_opt_arr",
     "do_nothing_sub_arr",
-    "useless_steps"
+    "useless_steps", 
+    "assigned_psng",
+    "wrong_psng"
 ]
 
 
@@ -101,6 +103,9 @@ class Tracker:
         self.pick_up_drop_off_steps = []
         self.drop_off_pick_up_steps = []
 
+        self.assigned_psng = 0
+        self.wrong_psng = 0
+
     def new_episode(self):
 
         if self.eps_counter > 0:
@@ -127,6 +132,12 @@ class Tracker:
             )
             self.total_values_dict["useless_steps"] = np.append(
                 self.total_values_dict["useless_steps"], self.useless_steps
+            )
+            self.total_values_dict["assigned_psng"] = np.append(
+                self.total_values_dict["assigned_psng"], self.assigned_psng
+            )
+            self.total_values_dict["wrong_psng"] = np.append(
+                self.total_values_dict["wrong_psng"], self.wrong_psng
             )
 
             if len(self.drop_off_pick_up_steps) > 0:
@@ -205,7 +216,7 @@ class Tracker:
         plot_values(df, ["illegal_pick_ups", "illegal_moves"], log_path)
         plot_values(df, ["do_nothing_opt_arr", "do_nothing_sub_arr"], log_path)
         plot_values(df, ["rewards", "epsilon"], log_path, double_scale=True)
-
+        plot_values(df, ["assigned_psng", "wrong_psng"], log_path)
 
 class MultiTracker:
     def __init__(self, n_agents, logger=None):

@@ -24,7 +24,7 @@ from common.logging import create_log_folder, create_logger, get_last_folder
 from common.logging import MultiTracker
 
 # Fill buffer
-episodes_without_training = 500
+episodes_without_training = 1000
 
 # ADV = calculated communication with fixed protocoll
 # COMM = predefined communication
@@ -34,7 +34,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
     disp = Display()
     disp.start()
 
-    env_name = "Cabworld-v1"
+    env_name = "Cabworld-v3"
     env = gym.make(env_name)
 
     n_agents = env.observation_space.shape[0]
@@ -51,8 +51,8 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
     n_msg = 2
     n_hidden = 64
 
-    lr = 0.001
-    gamma = 0.975
+    lr = 0.0001
+    gamma = 0.9
     epsilon = 1
     adv_epsilon = 1
     epsilon_decay = 0.9975
@@ -78,55 +78,35 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
     tracker.write_to_log("Replay size " + str(replay_size))
     tracker.write_to_log("Target update " + str(target_update))
 
-    dqn_models = []
-    memorys = []
+    
+    dqn = DQN(n_states, n_actions, n_hidden, lr)
+    memory = deque(maxlen=episodes_without_training * 2000)
 
     if adv:
-        adv_models = []
-        adv_memorys = []
-
-    for _ in range(n_agents):
-        dqn = DQN(n_states, n_actions, n_hidden, lr)
-        memory = deque(maxlen=episodes_without_training * 1000)
-        dqn_models.append(dqn)
-        memorys.append(memory)
-
-        if adv:
-            adv = AdvNet()
-            adv_memory = deque(maxlen=episodes_without_training * 1000)
-            adv_memorys.append(adv_memory)
-            adv_models.append(adv)
+        adv = AdvNet()
+        adv_memory = deque(maxlen=episodes_without_training * 1000)
 
     for episode in range(n_episodes + episodes_without_training + episodes_only_adv):
 
         tracker.new_episode()
 
         if episode % target_update == 0:
-            for dqn in dqn_models:
-                dqn.copy_target()
+            dqn.copy_target()
 
-        policies = []
-        adv_policies = []
+        policy = gen_epsilon_greedy_policy(
+            dqn, epsilon, n_actions)
 
-        for i in range(n_agents):
-
-            policy = gen_epsilon_greedy_policy(
-                dqn_models[i], epsilon, n_actions)
-            policies.append(policy)
-
-            if adv:
-                adv_policy = gen_epsilon_greedy_policy(
-                    adv_models[i], adv_epsilon, n_msg
-                )
-                adv_policies.append(adv_policy)
-
+        if adv:
+            adv_policy = gen_epsilon_greedy_policy(
+                adv, adv_epsilon, n_msg
+            )
         states = env.reset()
 
         if adv:
             adv_inputs = send_pos_to_other_cab(states)
             msgs = []
             for i in range(n_agents):
-                msgs.append(adv_policies[i](adv_inputs[i]))
+                msgs.append(adv_policy(adv_inputs[i]))
             states = add_msg_to_states(states, msgs)
         elif comm:
             states = add_fixed_msg_to_states(states)
@@ -144,7 +124,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
                 state = list(states[i])
                 #state[-1] = 0
                 state = tuple(state)
-                actions.append(policies[i](state))
+                actions.append(policy(state))
 
             next_states, rewards, is_done, _ = env.step(actions)
 
@@ -159,7 +139,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
                 adv_inputs_next = send_pos_to_other_cab(next_states)
                 msgs_next = []
                 for i in range(n_agents):
-                    msgs_next.append(adv_policies[i](adv_inputs[i]))
+                    msgs_next.append(adv_policy(adv_inputs[i]))
                 next_states = add_msg_to_states(next_states, msgs_next)
             elif comm:
                 next_states = add_fixed_msg_to_states(next_states)
@@ -175,27 +155,27 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
                 #next_state[-1] = 0
                 next_state = tuple(next_state)
 
-                memorys[i].append(
+                memory.append(
                     (state, actions[i],
                      next_state, rewards[i], is_done)
                 )
                 if adv: 
-                    adv_memorys[i].append(
+                    adv_memory.append(
                         (adv_inputs[i], msgs[i], adv_rewards[i]))
 
-                if episode > episodes_without_training and steps % 10 == 0:
+                if episode > episodes_without_training and steps % 100 == 0:
 
                     if adv:
-                        adv_models[i].replay(adv_memorys[i], replay_size)
+                        adv.replay(adv_memory, replay_size)
 
                     if episode > (episodes_without_training + episodes_only_adv):
                         if munchhausen:
-                            dqn_models[i].replay_munchhausen(
-                                memorys[i], replay_size, gamma
+                            dqn.replay_munchhausen(
+                                memory, replay_size, gamma
                             )
                         else:
-                            dqn_models[i].replay(
-                                memorys[i], replay_size, gamma)
+                            dqn.replay(
+                                memory, replay_size, gamma)
 
             if is_done:
                 adv_rewards = f"ADV {tracker.adv_episode_rewards}" if adv else ""
@@ -204,11 +184,9 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
                 )
 
                 # selective pops
-                for i, pick_ups in enumerate(tracker.get_pick_ups()): 
-                    if pick_ups < 1: 
-                        for _ in range(1000): 
-                            memorys[i].pop()
-                
+                if sum(tracker.get_pick_ups()) < 1:
+                    for _ in range(2000):
+                        memory.pop()
                 break
 
             states = next_states
@@ -227,9 +205,9 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
             tracker.track_epsilon(epsilon)
 
     for i in range(n_agents):
-        dqn_models[i].save_model(log_path, number=str(i + 1))
+        dqn.save_model(log_path, number=str(i + 1))
         if adv:
-            adv_models[i].save_model(log_path, number=str(i + 1))
+            adv.save_model(log_path, number=str(i + 1))
 
     tracker.plot(log_path)
 

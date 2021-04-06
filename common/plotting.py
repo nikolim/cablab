@@ -17,6 +17,8 @@ color_dict = {
     "do_nothing_sub_arr": "blueviolet",
     "epsilon": "orange",
     "useless_steps": "turquoise",
+    "wrong_psng": "red", 
+    "assigned_psng": "green", 
 }
 
 # Seaborn backend

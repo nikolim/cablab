@@ -138,3 +138,18 @@ def extend_single_agent_state(state):
     else:
         extended_state.append(0)
     return tuple(extended_state)
+
+
+def assign_passenger(state):
+    extended_state = list(state)
+    extended_state.append(random.randint(0,1))
+    return tuple(extended_state)
+
+def picked_up_assigned_psng(state): 
+    state = list(state)
+    if state[5] == state[7] and state[6] == state[8]: 
+        return True if state[-1] == 0 else False
+    elif state[5] == state[9] and state[6] == state[10]: 
+        return True if state[-1] == 1 else False
+    else: 
+        raise Exception("No-pick-up-possible")
