@@ -153,3 +153,25 @@ def picked_up_assigned_psng(state):
         return True if state[-1] == 1 else False
     else: 
         raise Exception("No-pick-up-possible")
+
+
+def random_assignment(states): 
+    a = random.randint(0,1)
+    b = 0 if a == 1 else 1
+    return add_msg_to_states(states, [a,b])
+
+
+def calc_distance(pos1, pos2):
+    return round(math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2), 3)
+
+def optimal_assignment(states): 
+    
+    a_1 = calc_distance((states[0][5],states[0][6]),(states[0][7],states[0][8]))
+    b_1 = calc_distance((states[0][5],states[0][6]),(states[0][7],states[0][8]))
+
+    a_2 = calc_distance((states[0][5],states[0][6]),(states[0][9],states[0][10]))
+    b_2 = calc_distance((states[0][5],states[0][6]),(states[0][9],states[0][10]))
+
+    assignment = [1,0] if (a_1 + b_2) < (a_2 + b_1) else [0,1]
+
+    return add_msg_to_states(states, assignment)

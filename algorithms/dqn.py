@@ -15,19 +15,19 @@ from common.logging import Tracker
 from common.features import assign_passenger, extend_single_agent_state, picked_up_assigned_psng
 
 # Fill buffer
-episodes_without_training = 2000
+episodes_without_training = 100
 
 
-def train_dqn(n_episodes, munchhausen=False, extended=True):
+def train_dqn(n_episodes, munchhausen=False, extended=False):
 
     disp = Display()
     disp.start()
 
-    env_name = "Cabworld-v1"
+    env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
     n_states = env.observation_space.shape[1] + (1 if extended else 0)
-    n_actions = env.action_space.n - 1
+    n_actions = env.action_space.n # - 1
     n_hidden = 64
 
     lr = 0.001
@@ -87,20 +87,21 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
 
             tracker.track_reward(reward)
 
-            if action == 4 and reward == 25: 
-                if picked_up_assigned_psng(state): 
-                    tracker.assigned_psng += 1
-                    reward = 50
-                else:
-                    tracker.wrong_psng += 1
-                    reward = 0
-                
-            if action == 5 and reward == 25: 
-                # successfull drop-off -> assign new passenger
-                next_state = assign_passenger(next_state) if extended else state
-            else: 
-                # keep the assigned passenger
-                next_state = tuple((list(next_state)) + [state[-1]])
+            if extended:
+                if action == 4 and reward == 25: 
+                    if picked_up_assigned_psng(state): 
+                        tracker.assigned_psng += 1
+                        reward = 50
+                    else:
+                        tracker.wrong_psng += 1
+                        reward = 0
+                    
+                if action == 5 and reward == 25: 
+                    # successfull drop-off -> assign new passenger
+                    next_state = assign_passenger(next_state) if extended else state
+                else: 
+                    # keep the assigned passenger
+                    next_state = tuple((list(next_state)) + [state[-1]])
 
             memory.append((state, action, next_state, reward, is_done))
 
@@ -131,13 +132,13 @@ def train_dqn(n_episodes, munchhausen=False, extended=True):
     tracker.plot(log_path)
 
 
-def deploy_dqn(n_episodes, wait, extended=True):
+def deploy_dqn(n_episodes, wait, extended=False):
 
-    env_name = "Cabworld-v1"
+    env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
     n_states = env.observation_space.shape[1] + (1 if extended else 0)
-    n_actions = env.action_space.n - 1
+    n_actions = env.action_space.n 
     n_hidden = 64
 
     dqn = DQN(n_states, n_actions, n_hidden)

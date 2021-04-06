@@ -125,7 +125,9 @@ def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False):
             for i, df in enumerate(dfs):
                 id = ids[0]
                 data = df[id]
-                color = adjust_lightness(color_dict[id], amount)
+                #color = adjust_lightness(color_dict[id], amount)
+                if i != 0: 
+                    color = "blueviolet"
 
                 mean_metric, std_metric, x = smoothing_mean_std(data, step_size=50)
                 ax1.set_ylabel(id)

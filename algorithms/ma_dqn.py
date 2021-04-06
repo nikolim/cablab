@@ -24,7 +24,7 @@ from common.logging import create_log_folder, create_logger, get_last_folder
 from common.logging import MultiTracker
 
 # Fill buffer
-episodes_without_training = 1000
+episodes_without_training = 100
 
 # ADV = calculated communication with fixed protocoll
 # COMM = predefined communication
@@ -34,7 +34,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
     disp = Display()
     disp.start()
 
-    env_name = "Cabworld-v3"
+    env_name = "Cabworld-v2"
     env = gym.make(env_name)
 
     n_agents = env.observation_space.shape[0]
@@ -51,11 +51,11 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
     n_msg = 2
     n_hidden = 64
 
-    lr = 0.0001
+    lr = 0.001
     gamma = 0.9
     epsilon = 1
     adv_epsilon = 1
-    epsilon_decay = 0.9975
+    epsilon_decay = 0.9985
     adv_epsilon_decay = 0.99
 
     replay_size = 100
@@ -119,14 +119,20 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
             steps += 1
 
             actions = []
+
             for i in range(n_agents):
                 # also remove tag
                 state = list(states[i])
-                #state[-1] = 0
+                state[-1] = 0
                 state = tuple(state)
                 actions.append(policy(state))
 
             next_states, rewards, is_done, _ = env.step(actions)
+
+            # only allow to pick up passenger if assigned
+            for reward, action, state, i in zip(rewards, actions, states, list(range(n_agents))): 
+                if action == 4 and reward == 25 and state[-1] == 1: 
+                    rewards[i] = 0
 
             tracker.track_reward(rewards)
             tracker.track_actions(states, actions, comm=(comm or adv))
@@ -148,11 +154,11 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
 
                 # artificial set last entry to zero after tracking
                 state = list(states[i])
-                #state[-1] = 0
+                state[-1] = 0
                 state = tuple(state)
 
                 next_state = list(next_states[i])
-                #next_state[-1] = 0
+                next_state[-1] = 0
                 next_state = tuple(next_state)
 
                 memory.append(
@@ -163,7 +169,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
                     adv_memory.append(
                         (adv_inputs[i], msgs[i], adv_rewards[i]))
 
-                if episode > episodes_without_training and steps % 100 == 0:
+                if episode > episodes_without_training and steps % 10 == 0:
 
                     if adv:
                         adv.replay(adv_memory, replay_size)
@@ -212,9 +218,9 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
     tracker.plot(log_path)
 
 
-def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=False):
+def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=True):
 
-    env_name = "Cabworld-v1"
+    env_name = "Cabworld-v2"
     env = gym.make(env_name)
 
     if not render: 
@@ -234,6 +240,8 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=False):
         print("No model")
         return
 
+    current_folder = "/home/niko/Info/cablab/runs/ma-dqn/107"
+
     dqn_models = []
     adv_models = []
 
@@ -242,7 +250,7 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=False):
         dqn_models.append(dqn)
         current_model = os.path.join(
             current_folder, "dqn" + str(i + 1) + ".pth")
-        #current_model = "/home/niko/Info/cablab/runs/dqn/148/dqn.pth"
+        
         dqn_models[i].load_model(current_model)
 
         if adv:
