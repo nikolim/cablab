@@ -10,6 +10,7 @@ from common.features import clip_state, cut_off_state
 from common.logging import create_log_folder, get_last_folder
 from common.logging import Tracker
 
+from common.plotting import plot_losses
 
 def train_ppo(n_episodes):
 
@@ -20,9 +21,9 @@ def train_ppo(n_episodes):
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    #n_states = env.observation_space.shape[1]
-    n_states = 11
-    n_actions = env.action_space.n - 1
+    n_states = env.observation_space.shape[0]
+    #n_states = 9
+    n_actions = env.action_space.n
     max_timesteps = 1000
 
     log_path = create_log_folder("ppo")
@@ -30,6 +31,8 @@ def train_ppo(n_episodes):
 
     memory = Memory()
     ppo = PPO(n_states, n_actions)
+
+    trained_episodes = 0
 
     for episode in range(n_episodes):
 
@@ -39,23 +42,29 @@ def train_ppo(n_episodes):
         for _ in range(max_timesteps):
 
             action = ppo.policy_old.act(state, memory)
-            old_state = state
+            tracker.track_actions(state, action)
+            # old_state = state
             state, reward, done, _ = env.step(action)
+            
             tracker.track_reward(reward)
-
+            
             memory.rewards.append(reward)
             memory.is_terminal.append(done)
 
             if done:
                 if tracker.get_pick_ups() > 0:
                     ppo.update(memory, episode)
+                    trained_episodes += 1
                 memory.clear()
                 print(
-                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
+                    f"Episode: {episode} Reward: {round(tracker.episode_reward,3)} Passengers {tracker.get_pick_ups()}"
                 )
                 break
+    
+    print("Trained episodes: ", trained_episodes)
 
     ppo.save_model(log_path)
+    plot_losses(ppo.losses)
     tracker.plot(log_path)
 
 
@@ -64,8 +73,8 @@ def deploy_ppo(n_episodes, wait):
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    #n_states = env.observation_space.shape[1]
-    n_states = 11
+    n_states = env.observation_space.shape[0]
+    #n_states = 11
     n_actions = env.action_space.n
 
     ppo = PPO(n_state=n_states, n_actions=n_actions)

@@ -147,15 +147,17 @@ def assign_passenger(state):
 
 def picked_up_assigned_psng(state): 
     state = list(state)
-    if state[5] == state[7] and state[6] == state[8]: 
+    if round(state[5],3) == round(state[7],3) and round(state[6],3) == round(state[8],3): 
         return True if state[-1] == 0 else False
-    elif state[5] == state[9] and state[6] == state[10]: 
+    elif round(state[5],3) == round(state[9],3) and round(state[6],3) == round(state[10],3): 
         return True if state[-1] == 1 else False
     else: 
-        raise Exception("No-pick-up-possible")
-
+        #raise Exception("No-pick-up-possible")
+        # TODO 
+        return random.sample([True,False],1)[0]
 
 def random_assignment(states): 
+    # multi agent assignment 
     a = random.randint(0,1)
     b = 0 if a == 1 else 1
     return add_msg_to_states(states, [a,b])
@@ -165,7 +167,7 @@ def calc_distance(pos1, pos2):
     return round(math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2), 3)
 
 def optimal_assignment(states): 
-    
+    # multi agent optimal assignment
     a_1 = calc_distance((states[0][5],states[0][6]),(states[0][7],states[0][8]))
     b_1 = calc_distance((states[0][5],states[0][6]),(states[0][7],states[0][8]))
 
@@ -175,3 +177,12 @@ def optimal_assignment(states):
     assignment = [1,0] if (a_1 + b_2) < (a_2 + b_1) else [0,1]
 
     return add_msg_to_states(states, assignment)
+
+
+def add_old_assignment(next_states, states):
+
+    new_states = []
+    for next_state, state in zip(next_states,states): 
+        new_states.append(tuple((list(next_state)) + [state[-1]]))
+
+    return new_states

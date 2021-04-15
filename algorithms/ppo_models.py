@@ -80,7 +80,8 @@ class ActorCritic(nn.Module):
 
 class PPO:
     def __init__(self, n_state, n_actions):
-        self.lr = 0.00001
+        self.lr_actor = 0.0001
+        self.lr_critic = 0.001    
         self.betas = (0.9, 0.999)
         self.gamma = 0.9
         self.eps_clip = 0.2
@@ -88,13 +89,21 @@ class PPO:
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.policy = ActorCritic(n_state, n_actions).to(self.device)
-        self.optimizer = torch.optim.Adam(
-            self.policy.parameters(), lr=self.lr, betas=self.betas
-        )
+        
+        #self.optimizer = torch.optim.Adam(
+        #    self.policy.parameters(), lr=self.lr, betas=self.betas
+        #)
+
+        self.optimizer = torch.optim.Adam([
+                        {'params': self.policy.actor.parameters(), 'lr': self.lr_actor},
+                        {'params': self.policy.critic.parameters(), 'lr': self.lr_critic}
+                    ])
+
         self.policy_old = ActorCritic(n_state, n_actions).to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
 
         self.MseLoss = nn.MSELoss()
+        self.losses = []
 
     def update(self, memory, episode):
         rewards = []
@@ -107,14 +116,15 @@ class PPO:
             discounted_reward = reward + (self.gamma * discounted_reward)
             rewards.insert(0, discounted_reward)
 
+        # normalise rewards
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
+        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
 
         old_states = torch.stack(tuple(memory.states)).to(self.device).detach()
         old_actions = torch.stack(tuple(memory.actions)).to(self.device).detach()
         old_logprobs = torch.stack(tuple(memory.logprobs)).to(self.device).detach()
 
-        for _ in range(self.K_epochs):
+        for i in range(self.K_epochs):
             logprobs, state_values, dist_entropy = self.policy.evaluate(
                 old_states, old_actions
             )
@@ -129,6 +139,8 @@ class PPO:
                 + 0.5 * self.MseLoss(state_values, rewards)
                 - 0.01 * dist_entropy
             )
+            if i == (self.K_epochs -1):
+               self.losses.append(torch.mean(loss).item())
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()

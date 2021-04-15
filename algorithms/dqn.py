@@ -26,7 +26,7 @@ def train_dqn(n_episodes, munchhausen=False, extended=False):
     env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
-    n_states = env.observation_space.shape[1] + (1 if extended else 0)
+    n_states = env.observation_space.shape[0] + (1 if extended else 0)
     n_actions = env.action_space.n # - 1
     n_hidden = 64
 
@@ -113,20 +113,20 @@ def train_dqn(n_episodes, munchhausen=False, extended=False):
 
             if is_done:
                 print(
-                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
+                    f"Episode: {episode} Reward: {round(tracker.episode_reward,3)} Passengers {tracker.get_pick_ups()}"
                 )
                 if tracker.get_pick_ups() < 1:
-                    for _ in range(1000):
+                    for _ in range(min(1000, len(memory))):
                         memory.pop()
-
                 break
             state = next_state
 
         if episode > episodes_without_training:
             epsilon = max(epsilon * epsilon_decay, 0.01)
 
-        if episode > 0:
-            tracker.track_epsilon(epsilon)
+        #if episode > 0:
+        #    tracker.track_epsilon(epsilon)
+
 
     dqn.save_model(log_path)
     tracker.plot(log_path)

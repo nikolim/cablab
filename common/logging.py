@@ -8,6 +8,8 @@ import numpy as np
 
 from common.plotting import *
 
+pick_up_reward = 1 
+illegal_move_penalty = -0.1
 
 def create_log_folder(algorithm):
     dirname = os.path.dirname(__file__)
@@ -51,7 +53,7 @@ def get_last_folder(algorithm):
 total_values = [
     "illegal_pick_ups",
     "illegal_moves",
-    "epsilon",
+    #"epsilon",
     "n_passengers",
     "rewards",
     "mean_pick_up_path",
@@ -60,8 +62,9 @@ total_values = [
     "do_nothing_opt_arr",
     "do_nothing_sub_arr",
     "useless_steps", 
-    "assigned_psng",
-    "wrong_psng"
+    #"assigned_psng",
+    #"wrong_psng",
+    #"avg_waiting_time" 
 ]
 
 
@@ -133,12 +136,12 @@ class Tracker:
             self.total_values_dict["useless_steps"] = np.append(
                 self.total_values_dict["useless_steps"], self.useless_steps
             )
-            self.total_values_dict["assigned_psng"] = np.append(
-                self.total_values_dict["assigned_psng"], self.assigned_psng
-            )
-            self.total_values_dict["wrong_psng"] = np.append(
-                self.total_values_dict["wrong_psng"], self.wrong_psng
-            )
+            # self.total_values_dict["assigned_psng"] = np.append(
+            #     self.total_values_dict["assigned_psng"], self.assigned_psng
+            # )
+            # self.total_values_dict["wrong_psng"] = np.append(
+            #     self.total_values_dict["wrong_psng"], self.wrong_psng
+            # )
 
             if len(self.drop_off_pick_up_steps) > 0:
                 self.total_values_dict["mean_pick_up_path"] = np.append(
@@ -165,7 +168,7 @@ class Tracker:
             self.illegal_moves_ep += 1
         if reward == -10:
             self.illegal_pick_up_ep += 1
-        if reward == 25:
+        if reward == pick_up_reward:
             if self.passenger:
                 self.drop_off_pick_up_steps.append(self.no_passenger_steps)
                 self.no_passenger_steps = 0
@@ -215,8 +218,8 @@ class Tracker:
         plot_values(df, ["useless_steps"], log_path)
         plot_values(df, ["illegal_pick_ups", "illegal_moves"], log_path)
         plot_values(df, ["do_nothing_opt_arr", "do_nothing_sub_arr"], log_path)
-        plot_values(df, ["rewards", "epsilon"], log_path, double_scale=True)
-        plot_values(df, ["assigned_psng", "wrong_psng"], log_path)
+        #plot_values(df, ["rewards", "epsilon"], log_path, double_scale=True)
+        #plot_values(df, ["assigned_psng", "wrong_psng"], log_path)
 
 class MultiTracker:
     def __init__(self, n_agents, logger=None):
@@ -231,12 +234,21 @@ class MultiTracker:
         self.adv_rewards = []
         self.adv_episode_rewards = [0] * self.n_agents
 
+        self.waiting_time = 0
+        self.reset_counter = -1
+        self.total_waiting_time = 0
+
         # storage for all episodes
         for i in range(n_agents):
             tracker = Tracker(logger)
             self.trackers.append(tracker)
 
         self.init_episode_vars()
+    
+    def reset_waiting_time(self): 
+        self.reset_counter += 1
+        self.total_waiting_time += self.waiting_time
+        self.waiting_time = 0
 
     def write_to_log(self, str): 
         if self.logger: 
@@ -252,14 +264,25 @@ class MultiTracker:
 
         self.adv_rewards.append(self.adv_episode_rewards)
 
+        # metric shared between agents
+        avg_waiting_time = self.total_waiting_time / max(1,self.reset_counter)
+
         for tracker in self.trackers:
+            if tracker.eps_counter > 0:
+                tracker.total_values_dict["avg_waiting_time"] = np.append(
+                    tracker.total_values_dict["avg_waiting_time"], avg_waiting_time
+                )
             tracker.new_episode()
 
         self.adv_episode_rewards = [0] * self.n_agents
 
+
     def track_reward(self, rewards):
         for i, tracker in enumerate(self.trackers):
             tracker.track_reward(rewards[i])
+
+        # increase waiting time in every timestep
+        self.waiting_time += 1
 
     def track_adv_reward(self, rewards):
         for i in range(len(rewards)):
@@ -316,6 +339,7 @@ class MultiTracker:
         plot_mult_agent(dfs, ["useless_steps"], log_path)
         plot_mult_agent(dfs, ["illegal_pick_ups", "illegal_moves"], log_path)
         plot_mult_agent(dfs, ["do_nothing_opt_arr", "do_nothing_sub_arr"], log_path)
+        plot_values(dfs[0], ["avg_waiting_time"], log_path)
                             
         for value in values_to_add: 
             summed_df[value] = dfs[0][value] + dfs[1][value]        
