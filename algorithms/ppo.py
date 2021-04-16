@@ -7,7 +7,7 @@ import gym_cabworld
 
 from algorithms.ppo_models import Memory, PPO
 from common.features import clip_state, cut_off_state
-from common.logging import create_log_folder, get_last_folder
+from common.logging import create_log_folder, get_last_folder, create_logger
 from common.logging import Tracker
 
 from common.plotting import plot_losses
@@ -18,16 +18,16 @@ def train_ppo(n_episodes):
 
     Display().start()
 
-    env_name = "Cabworld-v0"
+    env_name = "Cabworld-v1"
     env = gym.make(env_name)
 
     n_states = env.observation_space.shape[0]
-    #n_states = 9
     n_actions = env.action_space.n
     max_timesteps = 1000
 
     log_path = create_log_folder("ppo")
-    tracker = Tracker()
+    logger = create_logger(log_path)
+    tracker = Tracker(logger)
 
     memory = Memory()
     ppo = PPO(n_states, n_actions)
@@ -70,11 +70,10 @@ def train_ppo(n_episodes):
 
 def deploy_ppo(n_episodes, wait):
 
-    env_name = "Cabworld-v0"
+    env_name = "Cabworld-v1"
     env = gym.make(env_name)
 
     n_states = env.observation_space.shape[0]
-    #n_states = 11
     n_actions = env.action_space.n
 
     ppo = PPO(n_state=n_states, n_actions=n_actions)

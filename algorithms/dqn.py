@@ -16,14 +16,13 @@ from common.features import assign_passenger, extend_single_agent_state, picked_
 
 # Fill buffer
 episodes_without_training = 100
-
+env_name = "Cabworld-v1"
 
 def train_dqn(n_episodes, munchhausen=False, extended=False):
 
     disp = Display()
     disp.start()
 
-    env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
     n_states = env.observation_space.shape[0] + (1 if extended else 0)
@@ -82,13 +81,14 @@ def train_dqn(n_episodes, munchhausen=False, extended=False):
             action = policy(state)
 
             tracker.track_actions(state, action)
-
             next_state, reward, is_done, _ = env.step(action)
-
+            
             tracker.track_reward(reward)
+        
+            #tracker.track_reward_action(reward, action, state)
 
             if extended:
-                if action == 4 and reward == 25: 
+                if action == 4 and reward == 1: 
                     if picked_up_assigned_psng(state): 
                         tracker.assigned_psng += 1
                         reward = 50
@@ -96,7 +96,7 @@ def train_dqn(n_episodes, munchhausen=False, extended=False):
                         tracker.wrong_psng += 1
                         reward = 0
                     
-                if action == 5 and reward == 25: 
+                if action == 5 and reward == 1: 
                     # successfull drop-off -> assign new passenger
                     next_state = assign_passenger(next_state) if extended else state
                 else: 
@@ -127,17 +127,14 @@ def train_dqn(n_episodes, munchhausen=False, extended=False):
         #if episode > 0:
         #    tracker.track_epsilon(epsilon)
 
-
     dqn.save_model(log_path)
     tracker.plot(log_path)
 
 
 def deploy_dqn(n_episodes, wait, extended=False):
 
-    env_name = "Cabworld-v0"
     env = gym.make(env_name)
-
-    n_states = env.observation_space.shape[1] + (1 if extended else 0)
+    n_states = env.observation_space.shape[0] + (1 if extended else 0)
     n_actions = env.action_space.n 
     n_hidden = 64
 

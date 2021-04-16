@@ -80,8 +80,10 @@ class ActorCritic(nn.Module):
 
 class PPO:
     def __init__(self, n_state, n_actions):
-        self.lr_actor = 0.0001
-        self.lr_critic = 0.001    
+        #self.lr_actor = 0.0001 # working with lowered rewards
+        #self.lr_critic = 0.001  # working with lowered rewards  
+        self.lr_actor = 0.001 # working with lowered rewards
+        self.lr_critic = 0.01  # working with lowered rewards  
         self.betas = (0.9, 0.999)
         self.gamma = 0.9
         self.eps_clip = 0.2

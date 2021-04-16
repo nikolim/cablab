@@ -54,7 +54,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
         episodes_only_adv = 0
 
     # calc additional msg signal
-    n_states = env.observation_space.shape[1] + (1 if (adv or comm) else 0) + 1
+    n_states = env.observation_space.shape[1] + (1 if (adv or comm) else 0) # + 1
     n_actions = env.action_space.n
     n_msg = 2
     n_hidden = 64
@@ -63,7 +63,8 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
     gamma = 0.9
     epsilon = 1
     adv_epsilon = 1
-    epsilon_decay = 0.9985
+    #epsilon_decay = 0.9985 # working
+    epsilon_decay = 0.995
     adv_epsilon_decay = 0.99
 
     replay_size = 100
@@ -88,7 +89,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
 
     
     dqn = DQN(n_states, n_actions, n_hidden, lr)
-    memory = deque(maxlen=episodes_without_training * 2000)
+    memory = deque(maxlen=episodes_without_training * 1000)
 
     if adv:
         adv = AdvNet()
@@ -115,7 +116,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
 
         # initially asign passenger
         #states = random_assignment(states)
-        states = optimal_assignment(states)
+        # states = optimal_assignment(states)
 
         if adv:
             adv_inputs = send_pos_to_other_cab(states)
@@ -141,28 +142,28 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
             next_states, rewards, is_done, _ = env.step(actions)
             
             for reward, action in zip(rewards, actions): 
-                if reward == 25 and action == 4: 
+                if reward == 1 and action == 4: 
                     n_pick_ups += 1 
 
             if n_pick_ups == 2: 
                 tracker.reset_waiting_time()
                 n_pick_ups = 0
                 # next_states = random_assignment(next_states)
-                next_states = optimal_assignment(next_states)
+                # next_states = optimal_assignment(next_states)
             else: 
-                next_states = add_old_assignment(next_states, states)
-                #pass
+                #next_states = add_old_assignment(next_states, states)
+                pass
 
             tracker.track_reward(rewards)
             tracker.track_actions(states, actions, comm=(comm or adv))
 
             # give only reward for pick-up if passenger was assigned
-            for reward, action, state, i in zip(rewards, actions, states, list(range(n_agents))): 
-                if action == 4 and reward == 25: 
-                    if picked_up_assigned_psng(state): 
-                        rewards[i] = 50
-                    else: 
-                        rewards[i] = 0 
+            # for reward, action, state, i in zip(rewards, actions, states, list(range(n_agents))): 
+            #     if action == 4 and reward == 25: 
+            #         if picked_up_assigned_psng(state): 
+            #             rewards[i] = 50
+            #         else: 
+            #             rewards[i] = 0 
 
             if adv:
                 adv_rewards = calc_adv_rewards(adv_inputs, msgs)
@@ -177,10 +178,12 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
             elif comm:
                 next_states = add_fixed_msg_to_states(next_states)
 
+            summed_rewards = sum(rewards)
+
             for i in range(n_agents):
                 memory.append(
                     (states[i], actions[i],
-                     next_states[i], rewards[i], is_done)
+                     next_states[i], rewards[i], is_done) #rewards[i]
                 )
                 if adv: 
                     adv_memory.append(
@@ -208,7 +211,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
 
                 # selective pops
                 if sum(tracker.get_pick_ups()) < 1:
-                    for _ in range(2000):
+                    for _ in range(n_agents * 1000):
                         memory.pop()
                 break
 
@@ -245,7 +248,7 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=True):
         disp.start()
 
     n_agents = env.observation_space.shape[0]
-    n_states = env.observation_space.shape[1] + (1 if (adv or comm) else 0) + 1
+    n_states = env.observation_space.shape[1] + (1 if (adv or comm) else 0) #+ 1
     n_actions = env.action_space.n
     n_hidden = 64
 
@@ -257,7 +260,7 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=True):
         print("No model")
         return
 
-    current_folder = "/home/niko/Info/cablab/runs/ma-dqn/144"
+    #current_folder = "/home/niko/Info/cablab/runs/ma-dqn/144"
 
     dqn_models = []
     adv_models = []
@@ -281,7 +284,7 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=True):
 
         tracker.new_episode()
         states = env.reset()
-        states = optimal_assignment(states)
+        #states = optimal_assignment(states)
 
         if adv:
             adv_inputs = send_pos_to_other_cab(states)
@@ -298,7 +301,7 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=True):
             actions = [dqn.deploy(state)
                        for dqn, state in zip(dqn_models, states)]
             states, rewards, done, _ = env.step(actions)
-            states = optimal_assignment(states)
+            #states = optimal_assignment(states)
 
             tracker.track_reward(rewards)
             tracker.track_actions(states, actions, comm=comm)
@@ -314,7 +317,6 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=True):
 
             if render:
                 env.render()
-            if render:
                 time.sleep(wait)
             if done:
                 print(
@@ -323,6 +325,8 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=True):
                 break
 
         if episode > 0:
-                tracker.track_epsilon(0.01)
+            tracker.track_epsilon(0.01)
+
+        tracker.plot(log_path=current_folder, eval=True)
 
     
