@@ -150,7 +150,7 @@ class DQN:
         print(f"Model loaded {path}")
 
     def deploy(self, s):
-        if random.random() < 0.05:
+        if random.random() < 0.01:
             return random.randint(0, 6)
         else:
             with torch.no_grad():

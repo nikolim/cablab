@@ -16,7 +16,7 @@ from common.features import assign_passenger, extend_single_agent_state, picked_
 
 # Fill buffer
 episodes_without_training = 100
-env_name = "Cabworld-v1"
+env_name = "Cabworld-v0"
 
 def train_dqn(n_episodes, munchhausen=False, extended=False):
 
@@ -50,6 +50,7 @@ def train_dqn(n_episodes, munchhausen=False, extended=False):
     tracker.write_to_log("Epsilon decay " + str(epsilon_decay))
     tracker.write_to_log("Replay size " + str(replay_size))
     tracker.write_to_log("Target update " + str(target_update))
+    tracker.write_to_log("Munchhausen " + str(munchhausen))
     
     dqn = DQN(n_states, n_actions, n_hidden, lr)
 
@@ -132,7 +133,13 @@ def train_dqn(n_episodes, munchhausen=False, extended=False):
     tracker.plot(log_path)
 
 
-def deploy_dqn(n_episodes, wait, extended=False):
+def deploy_dqn(n_episodes, wait, extended=False, eval=False, render=False):
+
+    tracker = Tracker() if eval else False
+
+    if not render: 
+        disp = Display()
+        disp.start()
 
     env = gym.make(env_name)
     n_states = env.observation_space.shape[0] + (1 if extended else 0)
@@ -150,17 +157,24 @@ def deploy_dqn(n_episodes, wait, extended=False):
     dqn.load_model(current_model)
 
     for _ in range(n_episodes):
+        tracker.new_episode()
         state = env.reset()
         state = extend_single_agent_state(state) if extended else state
         episode_reward = 0
         done = False
         while not done:
             action = dqn.deploy(state)
+            old_state = state
             state, reward, done, _ = env.step(action)
+            if eval:
+                tracker.track_reward_and_action(reward, action, old_state)
             state = extend_single_agent_state(state) if extended else state
             episode_reward += reward
-            env.render()
-            time.sleep(wait)
+            if render:
+                env.render()
+                time.sleep(wait)
             if done:
                 print(f"Reward {episode_reward}")
                 break
+    if eval:
+        tracker.plot(log_path=current_folder, eval=True)

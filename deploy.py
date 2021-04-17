@@ -37,6 +37,14 @@ parser.add_argument(
     default=False,
     help="Render deploy runs",
 )
+parser.add_argument(
+    "-e",
+    "--eval",
+    required=False,
+    type=bool,
+    default=False,
+    help="Run eval runs",
+)
 
 args = parser.parse_args()
 
@@ -45,7 +53,7 @@ valid_algorithms = ["ppo", "dqn"]
 if args.algorithm == "ppo":
     deploy_ppo(int(args.number), float(args.wait))
 elif args.algorithm == "dqn":
-    deploy_dqn(int(args.number), float(args.wait))
+    deploy_dqn(int(args.number), float(args.wait), eval=bool(args.eval),render=bool(args.render))
 elif args.algorithm == "a2c":
     deploy_a2c(int(args.number), float(args.wait))
 elif args.algorithm == "rand":

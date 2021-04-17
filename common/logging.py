@@ -10,7 +10,7 @@ from common.plotting import *
 
 pick_up_reward = 1
 step_penalty = -0.01
-illegal_move_penalty = -0.1
+illegal_move_penalty = -0.01
 
 
 def create_log_folder(algorithm):
@@ -108,6 +108,7 @@ class Tracker:
                 self.episode_dict["mean_drop_off_path"] = 0
 
             self.df = self.df.append(self.episode_dict, ignore_index=True)
+
         self.init_episode_vars()
         self.eps_counter += 1
 
@@ -118,6 +119,7 @@ class Tracker:
                 self.illegal_moves_ep += 1
             else:
                 self.illegal_pick_up_ep += 1
+
         elif reward == pick_up_reward:
             if self.passenger:
                 self.drop_off_pick_up_steps.append(self.no_passenger_steps)
@@ -160,9 +162,9 @@ class Tracker:
 
         plot_values(self.df, ["rewards"], log_path)
         plot_values(self.df, ["n_passengers"], log_path)
-
-        # plot_values(self.df, ["useless_steps"], log_path)
-        # plot_values(self.df, ["illegal_pick_ups", "illegal_moves"], log_path)
+        plot_values(self.df, ["useless_steps"], log_path)
+        plot_values(self.df, ["illegal_pick_ups", "illegal_moves"], log_path)
+        
         # plot_values(self.df, ["do_nothing_opt_arr",
         #                       "do_nothing_sub_arr"], log_path)
         #plot_values(df, ["rewards", "epsilon"], log_path, double_scale=True)
@@ -269,9 +271,9 @@ class MultiTracker:
 
         plot_mult_agent(dfs, ["rewards"], log_path)
         plot_mult_agent(dfs, ["n_passengers"], log_path)
-
         # plot_mult_agent(dfs, ["useless_steps"], log_path)
         # plot_mult_agent(dfs, ["illegal_pick_ups", "illegal_moves"], log_path)
+
         # plot_mult_agent(dfs, ["do_nothing_opt_arr",
         #                       "do_nothing_sub_arr"], log_path)
         # plot_values(dfs[0], ["avg_waiting_time"], log_path)
