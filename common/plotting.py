@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 import matplotlib.colors as mc
 import colorsys
-
+import pandas as pd
 
 color_dict = {
     "rewards": "royalblue",
@@ -168,14 +168,6 @@ def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False):
             for i, df in enumerate(dfs):
                 data = df[id]
                 color = adjust_lightness(color_dict[id], amount)
-
-                #if i == 0: 
-                #    color = "firebrick"
-                #elif i == 1: 
-                #    color = "darkorange"
-                #else: 
-                #    color = "darkgreen"
-
                 mean_metric, std_metric, x = smoothing_mean_std(data, step_size=50)
                 ax1.set_ylabel(id)
                 label = labels[i] if labels else (id + str(i))
@@ -194,3 +186,43 @@ def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False):
     name = "_".join(ids)
 
     plt.savefig(os.path.join(path, name + "_mult.png"), dpi=1200)
+
+
+
+def plot_mult_runs(dfs, ids, path, labels=None, double_scale=False):
+
+    fig, ax1 = plt.subplots()
+    ax1.set_xlabel("Episodes")
+    
+    DF = pd.concat(dfs,keys=range(len(dfs))).groupby(level=1)
+
+    meandf = DF.mean()
+    maxdf= DF.max()
+    mindf= DF.min()
+
+    for i, id in enumerate(ids):
+        color = color_dict[id]
+
+        #mean_metric, std_metric, x = smoothing_mean_std(data, step_size=50)
+        ax1.set_ylabel(id)
+        label = labels[i] if labels else (id + str(i))
+        x = list(range(len(DF)))
+
+        ax1.plot(x,meandf[id], color=color, label="Mean")
+
+        #ax1.plot(x,mindf[id], color=color, label="Min")
+        #ax1.plot(x,maxdf[id], color=color, label="Max")
+
+        ax1.fill_between(
+            x,
+            mindf[id],
+            maxdf[id],
+            alpha=0.2,
+            color=color,
+        )
+
+    plt.legend(loc="best")
+    fig.tight_layout()
+    name = "_".join(ids)
+
+    plt.savefig(os.path.join(path, name + "_mult_runs.png"), dpi=1200)
