@@ -29,7 +29,7 @@ from common.logging import create_log_folder, create_logger, get_last_folder
 from common.logging import MultiTracker
 
 # Fill buffer
-episodes_without_training = 100
+episodes_without_training = 10
 
 # ADV = calculated communication with fixed protocoll
 # COMM = predefined communication
@@ -180,28 +180,35 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
 
             summed_rewards = sum(rewards)
 
-            for i in range(n_agents):
-                memory.append(
-                    (states[i], actions[i],
-                     next_states[i], rewards[i], is_done) #rewards[i]
-                )
-                if adv: 
-                    adv_memory.append(
-                        (adv_inputs[i], msgs[i], adv_rewards[i]))
+            memory.append(
+                    (states[0], states[1], actions[0], actions[1],
+                     next_states[0], next_states[1], summed_rewards, is_done))
 
-                if episode > episodes_without_training and steps % 10 == 0:
+            if episode > episodes_without_training and steps % 10 == 0:
+                dqn.replay(memory, replay_size, gamma)
 
-                    if adv:
-                        adv.replay(adv_memory, replay_size)
-
-                    if episode > (episodes_without_training + episodes_only_adv):
-                        if munchhausen:
-                            dqn.replay_munchhausen(
-                                memory, replay_size, gamma
-                            )
-                        else:
-                            dqn.replay(
-                                memory, replay_size, gamma)
+            #for i in range(n_agents):
+            #    memory.append(
+            #        (states[i], actions[i],
+            #         next_states[i], rewards[i], is_done) #rewards[i]
+            #    )
+            #    if adv: 
+            #        adv_memory.append(
+            #            (adv_inputs[i], msgs[i], adv_rewards[i]))
+            #
+            #    if episode > episodes_without_training and steps % 10 == 0:
+            #
+            #        if adv:
+            #            adv.replay(adv_memory, replay_size)
+            #
+            #        if episode > (episodes_without_training + episodes_only_adv):
+            #            if munchhausen:
+            #                dqn.replay_munchhausen(
+            #                    memory, replay_size, gamma
+            #                )
+            #            else:
+            #                dqn.replay(
+            #                    memory, replay_size, gamma)
 
             if is_done:
                 adv_rewards = f"ADV {tracker.adv_episode_rewards}" if adv else ""
@@ -211,8 +218,9 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
 
                 # selective pops
                 if sum(tracker.get_pick_ups()) < 1:
-                    for _ in range(n_agents * 1000):
+                    for _ in range(1000):
                         memory.pop()
+                        pass
                 break
 
             states = next_states

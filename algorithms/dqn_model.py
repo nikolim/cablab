@@ -10,6 +10,12 @@ torch.manual_seed(0)
 
 counter = 0
 
+class VDNMixer(torch.nn.Module):
+    def __init__(self):
+        super(VDNMixer, self).__init__()
+
+    def forward(self, agent_qs):
+        return torch.sum(agent_qs, dim=2, keepdim=True)
 
 class DQN:
     def __init__(self, n_state, n_action, n_hidden=16, lr=0.01):
@@ -26,6 +32,8 @@ class DQN:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.losses = []
 
+        self.mixer = VDNMixer()
+        
         # needed for munchhausen
         self.entropy_tau = 0.03
         self.alpha = 0.9
@@ -41,49 +49,78 @@ class DQN:
             .float()
             .to(self.device)
         )
+        states2 = (
+            torch.from_numpy(np.stack([tmp[1] for tmp in replay_data]))
+            .float()
+            .to(self.device)
+        )
         actions = (
-            torch.from_numpy(np.vstack([tmp[1] for tmp in replay_data]))
+            torch.from_numpy(np.vstack([tmp[2] for tmp in replay_data]))
+            .long()
+            .to(self.device)
+        )
+        actions2 = (
+            torch.from_numpy(np.vstack([tmp[3] for tmp in replay_data]))
             .long()
             .to(self.device)
         )
         next_states = (
-            torch.from_numpy(np.stack([tmp[2] for tmp in replay_data]))
+            torch.from_numpy(np.stack([tmp[4] for tmp in replay_data]))
+            .float()
+            .to(self.device)
+        )
+        next_states2 = (
+            torch.from_numpy(np.stack([tmp[5] for tmp in replay_data]))
             .float()
             .to(self.device)
         )
         rewards = (
-            torch.from_numpy(np.vstack([tmp[3] for tmp in replay_data]))
+            torch.from_numpy(np.vstack([tmp[6] for tmp in replay_data]))
             .float()
             .to(self.device)
         )
         dones = (
             torch.from_numpy(
-                np.vstack([tmp[4] for tmp in replay_data]).astype(np.uint8)
+                np.vstack([tmp[7] for tmp in replay_data]).astype(np.uint8)
             )
             .float()
             .to(self.device)
         )
 
-        return states, actions, rewards, next_states, dones
+        return states, states2,actions, actions,rewards, next_states, next_states,dones
 
     def replay(self, memory, replay_size, gamma):
 
         self.optimizer.zero_grad()
 
-        states, actions, rewards, next_states, dones = self.sample(memory, replay_size)
+        states, states2, actions, actions2, rewards, next_states, next_states2,dones = self.sample(memory, replay_size)
+
+        #assert len(states) == len(actions) == len(next_states)
 
         q_values = self.model(states)
         q_values_next = self.model_target(next_states).detach()
-        q_values_pred = q_values.gather(1, actions)
+        q_values_next_max1 = q_values_next.max(1)[0].unsqueeze(-1)
+        chosen_action_qvals1 = q_values.gather(1, actions)
+
+        q_values2 = self.model(states2)
+        q_values_next2 = self.model_target(next_states2).detach()
+        q_values_next_max2 = q_values_next2.max(1)[0].unsqueeze(-1)
+        chosen_action_qvals2 = q_values2.gather(1, actions2)
+
+        #mix (use VDN later)
+        # chosen_action_qvals = chosen_action_qvals1 + chosen_action_qvals2
+        # target_max_qvals = q_values_next_max1 + q_values_next_max2
+
+        chosen_action_qvals = torch.sum(torch.cat((chosen_action_qvals1, chosen_action_qvals2),1),1).unsqueeze(-1)
+        target_max_qvals = torch.sum(torch.cat((q_values_next_max1, q_values_next_max2),1),1).unsqueeze(-1)
 
         q_targets_done = dones.view(-1, 1) * rewards
         q_targets_not_done = (1 - dones) * (
-            rewards + gamma * q_values_next.max(1)[0].unsqueeze(-1)
+            rewards + gamma * target_max_qvals
         )
-
         q_targets = q_targets_done + q_targets_not_done
 
-        loss = mse_loss(q_values_pred, q_targets)
+        loss = mse_loss(chosen_action_qvals, q_targets)
         loss.backward()
         self.optimizer.step()
 
