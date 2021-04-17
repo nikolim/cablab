@@ -33,7 +33,7 @@ def train_dqn(n_episodes, munchhausen=False, extended=False):
     gamma = 0.9
     
     epsilon = 1
-    epsilon_decay = 0.9985
+    epsilon_decay = 0.9975
     replay_size = 100
     target_update = 50
 
@@ -80,12 +80,12 @@ def train_dqn(n_episodes, munchhausen=False, extended=False):
             steps += 1
             action = policy(state)
 
-            tracker.track_actions(state, action)
+            #tracker.track_actions(state, action)
             next_state, reward, is_done, _ = env.step(action)
             
-            tracker.track_reward(reward)
+            #tracker.track_reward(reward)
         
-            #tracker.track_reward_action(reward, action, state)
+            tracker.track_reward_and_action(reward, action, state)
 
             if extended:
                 if action == 4 and reward == 1: 
@@ -124,8 +124,9 @@ def train_dqn(n_episodes, munchhausen=False, extended=False):
         if episode > episodes_without_training:
             epsilon = max(epsilon * epsilon_decay, 0.01)
 
-        #if episode > 0:
-        #    tracker.track_epsilon(epsilon)
+        if episode > 0:
+            #tracker.track_epsilon(epsilon)
+            pass
 
     dqn.save_model(log_path)
     tracker.plot(log_path)

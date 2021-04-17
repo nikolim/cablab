@@ -54,7 +54,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
         episodes_only_adv = 0
 
     # calc additional msg signal
-    n_states = env.observation_space.shape[1] + (1 if (adv or comm) else 0) # + 1
+    n_states = env.observation_space.shape[1] + (1 if (adv or comm) else 0) + 1
     n_actions = env.action_space.n
     n_msg = 2
     n_hidden = 64
@@ -116,7 +116,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
 
         # initially asign passenger
         #states = random_assignment(states)
-        # states = optimal_assignment(states)
+        states = optimal_assignment(states)
 
         if adv:
             adv_inputs = send_pos_to_other_cab(states)
@@ -149,21 +149,23 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
                 tracker.reset_waiting_time()
                 n_pick_ups = 0
                 # next_states = random_assignment(next_states)
-                # next_states = optimal_assignment(next_states)
+                next_states = optimal_assignment(next_states)
             else: 
-                #next_states = add_old_assignment(next_states, states)
+                next_states = add_old_assignment(next_states, states)
                 pass
 
-            tracker.track_reward(rewards)
-            tracker.track_actions(states, actions, comm=(comm or adv))
+            #tracker.track_reward(rewards)
+            #tracker.track_actions(states, actions, comm=(comm or adv))
+
+            tracker.track_reward_and_action(rewards, actions, states)
 
             # give only reward for pick-up if passenger was assigned
-            # for reward, action, state, i in zip(rewards, actions, states, list(range(n_agents))): 
-            #     if action == 4 and reward == 25: 
-            #         if picked_up_assigned_psng(state): 
-            #             rewards[i] = 50
-            #         else: 
-            #             rewards[i] = 0 
+            for reward, action, state, i in zip(rewards, actions, states, list(range(n_agents))): 
+                if action == 4 and reward == 1: 
+                    if picked_up_assigned_psng(state): 
+                        rewards[i] = 2
+                    else: 
+                        rewards[i] = 0 
 
             if adv:
                 adv_rewards = calc_adv_rewards(adv_inputs, msgs)
@@ -183,7 +185,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
             for i in range(n_agents):
                 memory.append(
                     (states[i], actions[i],
-                     next_states[i], rewards[i], is_done) #rewards[i]
+                     next_states[i], summed_rewards, is_done) #rewards[i]
                 )
                 if adv: 
                     adv_memory.append(
@@ -228,7 +230,8 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
             epsilon = max(epsilon * epsilon_decay, 0.01)
 
         if episode > 0:
-            tracker.track_epsilon(epsilon)
+            #tracker.track_epsilon(epsilon)
+            pass
 
     for i in range(n_agents):
         dqn.save_model(log_path, number=str(i + 1))
