@@ -279,6 +279,11 @@ class MultiTracker:
 
         if eval:
             log_path = os.path.join(log_path, "eval")
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
+        else: 
+            log_path += "2"
+            os.makedirs(log_path)
 
         plot_mult_agent(dfs, ["rewards"], log_path)
         plot_mult_agent(dfs, ["n_passengers"], log_path)

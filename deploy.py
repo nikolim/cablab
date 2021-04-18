@@ -59,6 +59,6 @@ elif args.algorithm == "a2c":
 elif args.algorithm == "rand":
     deploy_random(int(args.number), float(args.wait))
 elif args.algorithm == "ma-dqn":
-    deploy_ma_dqn(int(args.number), float(args.wait), comm=bool(args.communication), render=bool(args.render))
+    deploy_ma_dqn(int(args.number), float(args.wait), comm=bool(args.communication), render=bool(args.render), eval=bool(args.eval))
 else:
     print(f"Not a valid algorithm: {args.algorithm}")

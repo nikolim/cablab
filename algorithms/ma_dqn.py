@@ -188,7 +188,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
                     if episode > (episodes_without_training + n_episodes):
                         adv.replay(adv_memory, 10)
 
-                    if episodes_without_training < episode < (episodes_without_training + n_episodes):
+                    if episode < (episodes_without_training + n_episodes):
                         if munchhausen:
                             dqn.replay_munchhausen(
                                 memory, replay_size, gamma
@@ -226,7 +226,7 @@ def train_ma_dqn(n_episodes, munchhausen=False, adv=False, comm=False):
     tracker.plot(log_path)
 
 
-def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=True):
+def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=False, eval=False):
 
     env_name = "Cabworld-v3"
     env = gym.make(env_name)
@@ -269,8 +269,6 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=True):
             adv_models[i].load_model(current_adv_model)
 
     for episode in range(n_episodes):
-
-
         tracker.new_episode()
         states = env.reset()
         states = random_assignment(states)
@@ -303,7 +301,7 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=True):
                 tracker.reset_waiting_time()
                 n_pick_ups = 0
                 states = random_assignment(states)
-                #next_states = optimal_assignment(next_states)
+                #states = optimal_assignment(states)
             else: 
                 states = add_old_assignment(states, old_states)
                 pass
@@ -330,9 +328,7 @@ def deploy_ma_dqn(n_episodes, wait, adv=False, comm=False, render=True):
                 )
                 break
 
-        if episode > 0:
-            tracker.track_epsilon(0.01)
-
-        #tracker.plot(log_path=current_folder, eval=True)
+    if eval:
+        tracker.plot(log_path=current_folder, eval=True)
 
     
