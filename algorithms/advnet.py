@@ -10,7 +10,7 @@ torch.manual_seed(0)
 
 
 class AdvNet:
-    def __init__(self, n_input=6, n_msg=2, n_hidden=16, lr=0.01):
+    def __init__(self, n_input=8, n_msg=2, n_hidden=16, lr=0.01):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
             torch.nn.Linear(n_input, n_hidden),
@@ -24,10 +24,7 @@ class AdvNet:
 
     def sample(self, memory, replay_size):
 
-        if len(memory) < replay_size:
-            return
-
-        replay_data = random.sample(memory, replay_size)
+        replay_data = random.sample(memory, min(len(memory),replay_size))
         states = (
             torch.from_numpy(np.stack([tmp[0] for tmp in replay_data]))
             .float()
@@ -43,20 +40,15 @@ class AdvNet:
             .float()
             .to(self.device)
         )
-
         return states, actions, rewards
 
     def replay(self, memory, replay_size):
 
         self.optimizer.zero_grad()
-
         states, actions, rewards = self.sample(memory, replay_size)
-
         q_values = self.model(states)
         q_values_pred = q_values.gather(1, actions)
-
         loss = mse_loss(q_values_pred, rewards)
-
         loss.backward()
         self.optimizer.step()
 

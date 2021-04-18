@@ -84,11 +84,27 @@ def send_pos_to_other_cab(states):
     return [adv1, adv2]
 
 
+def create_adv_inputs(states):
+
+    # For testing this only works for 2 agents and 2 passengers
+    assert len(states) == 2
+    assert len(states[0]) == 11 
+
+    # passengers are the same for all cabs
+    pass1_x, pass1_y = states[0][7], states[0][8]
+    pass2_x, pass2_y = states[0][9], states[0][10]
+
+    cab1_pos_x, cab1_pos_y = states[0][5], states[0][6]
+    cab2_pos_x, cab2_pos_y = states[1][5], states[1][6]
+
+    return [cab1_pos_x, cab1_pos_y, cab2_pos_x, cab2_pos_y, pass1_x, pass1_y, pass2_x, pass2_y]
+
+
 def add_msg_to_states(states, msgs):
 
     new_states = []
-
-    for state, msg in zip(states, msgs[::-1]):
+    
+    for state, msg in zip(states, msgs):
         state_arr = list(state)
         state_arr.append(msg)
         new_states.append(tuple(state_arr))

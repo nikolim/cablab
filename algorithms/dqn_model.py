@@ -70,7 +70,7 @@ class DQN:
 
         self.optimizer.zero_grad()
 
-        states, actions, rewards, next_states, dones = self.sample(memory, replay_size)
+        states, actions, rewards, next_states, dones = self.sample(memory, min(len(memory),replay_size))
 
         q_values = self.model(states)
         q_values_next = self.model_target(next_states).detach()

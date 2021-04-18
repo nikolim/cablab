@@ -86,18 +86,17 @@ class Tracker:
 
     def new_episode(self):
         if self.eps_counter > 0:
-            self.episode_dict = {
-                "rewards": self.episode_reward,
-                "illegal_pick_ups": self.illegal_pick_up_ep,
-                "illegal_moves": self.illegal_moves_ep,
-                "n_passengers": self.pick_ups // 2,
-                "do_nothing_arr": self.do_nothing,
-                "do_nothing_opt_arr": self.do_nothing_opt,
-                "do_nothing_sub_arr": self.do_nothing_sub,
-                "useless_steps": self.useless_steps,
-                "assigned_psng": self.assigned_psng,
-                "wrong_psng": self.wrong_psng,
-            }
+            self.episode_dict["rewards"] = self.episode_reward
+            self.episode_dict["illegal_pick_ups"] = self.illegal_pick_up_ep
+            self.episode_dict["illegal_moves"] = self.illegal_moves_ep
+            self.episode_dict["n_passengers"] = self.pick_ups // 2
+            self.episode_dict["do_nothing_arr"] = self.do_nothing
+            self.episode_dict["do_nothing_opt_arr"] = self.do_nothing_opt
+            self.episode_dict["do_nothing_sub_arr"] = self.do_nothing_sub
+            self.episode_dict["useless_steps"] = self.useless_steps
+            self.episode_dict["assigned_psng"] = self.assigned_psng
+            self.episode_dict["wrong_psng"] = self.wrong_psng
+
             if len(self.drop_off_pick_up_steps) > 0:
                 self.episode_dict["mean_pick_up_path"] = sum(
                     self.drop_off_pick_up_steps) / len(self.drop_off_pick_up_steps)
@@ -188,10 +187,17 @@ class MultiTracker:
 
         self.init_episode_vars()
 
-    def reset_waiting_time(self):
-        self.reset_counter += 1
-        self.total_waiting_time += self.waiting_time
+        self.adv_reward_counter = 0
+        self.adv_episode_rewards = 0
+        self.adv_episode_reward_arr = []
+
+    def reset_waiting_time(self, log=True):
+        if log:
+            self.reset_counter += 1
+            self.total_waiting_time += self.waiting_time
+        tmp = self.waiting_time
         self.waiting_time = 0
+        return tmp
 
     def write_to_log(self, str):
         if self.logger:
@@ -203,6 +209,9 @@ class MultiTracker:
 
     def new_episode(self):
 
+        ratio = self.adv_episode_rewards / max(self.adv_reward_counter,1)
+        ratio = -1 if ratio == 0 else ratio
+
         # metric shared between agents
         avg_waiting_time = self.total_waiting_time / max(1, self.reset_counter)
 
@@ -211,7 +220,9 @@ class MultiTracker:
                 tracker.episode_dict["avg_waiting_time"] = avg_waiting_time
             tracker.new_episode()
 
-        self.adv_episode_rewards = [0] * self.n_agents
+        self.adv_episode_reward_arr.append(ratio)
+        self.adv_episode_rewards = 0
+        self.adv_reward_counter = 0
 
     def track_reward_and_action(self, rewards, actions, states):
         for i, tracker in enumerate(self.trackers):
@@ -220,9 +231,9 @@ class MultiTracker:
         # increase waiting time in every timestep
         self.waiting_time += 1
 
-    def track_adv_reward(self, rewards):
-        for i in range(len(rewards)):
-            self.adv_episode_rewards[i] += rewards[i]
+    def track_adv_reward(self, reward):
+        self.adv_episode_rewards += reward
+        self.adv_reward_counter += 1
 
     def track_actions(self, states, actions, comm=False):
 
@@ -276,10 +287,14 @@ class MultiTracker:
 
         # plot_mult_agent(dfs, ["do_nothing_opt_arr",
         #                       "do_nothing_sub_arr"], log_path)
-        # plot_values(dfs[0], ["avg_waiting_time"], log_path)
+        
+        plot_values(dfs[0], ["avg_waiting_time"], log_path)
 
         summed_df = dfs[0]
         for i in range(1,len(dfs)): 
             summed_df += dfs[i]
         file_name = os.path.join(log_path, "logs_summed.csv")
         summed_df.to_csv(file_name)
+
+        plot_arr(self.adv_episode_reward_arr, log_path, "adv_rewards.png")
+

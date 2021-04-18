@@ -226,3 +226,8 @@ def plot_mult_runs(dfs, ids, path, labels=None, double_scale=False):
     name = "_".join(ids)
 
     plt.savefig(os.path.join(path, name + "_mult_runs.png"), dpi=1200)
+
+def plot_arr(arr, path, name): 
+    fig, ax1 = plt.subplots()
+    ax1.plot(arr)
+    plt.savefig(os.path.join(path, name), dpi=1200)
