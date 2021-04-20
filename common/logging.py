@@ -111,7 +111,7 @@ class Tracker:
         self.init_episode_vars()
         self.eps_counter += 1
 
-    def track_reward_and_action(self, reward, action, state):
+    def track_reward_and_action(self, reward, action, state, multi_agent=False):
         # track rewards
         if reward == illegal_move_penalty:
             if action in [0, 1, 2, 3]:
@@ -119,7 +119,7 @@ class Tracker:
             else:
                 self.illegal_pick_up_ep += 1
 
-        elif reward == pick_up_reward:
+        elif reward == pick_up_reward: # == drop-off-reward
             if self.passenger:
                 self.drop_off_pick_up_steps.append(self.no_passenger_steps)
                 self.no_passenger_steps = 0
@@ -136,18 +136,19 @@ class Tracker:
             self.no_passenger_steps += 1
 
         # track actions
-        if action == 6:
-            self.do_nothing += 1
-            if state[7] == -1 and state[8] == -1:
-                self.do_nothing_opt += 1
+        if not multi_agent:
+            if action == 6:
+                self.do_nothing += 1
+                if state[7] == -1 and state[8] == -1:
+                    self.do_nothing_opt += 1
+                else:
+                    self.do_nothing_sub += 1
             else:
-                self.do_nothing_sub += 1
-        else:
-            if state[-1] == 1:
-                self.useless_steps += 1
+                if state[7] == -1 and state[8] == -1:
+                    self.useless_steps += 1
 
     def get_pick_ups(self):
-        return self.pick_ups // 2
+        return round(self.pick_ups / 2, 3)
 
     def plot(self, log_path, eval=False):
 
@@ -159,11 +160,13 @@ class Tracker:
         if not os.path.exists(log_path):
             os.makedirs(log_path)
 
+        # Base Metric
         plot_values(self.df, ["rewards"], log_path)
         plot_values(self.df, ["n_passengers"], log_path)
-        plot_values(self.df, ["useless_steps"], log_path)
         plot_values(self.df, ["illegal_pick_ups", "illegal_moves"], log_path)
         
+        # Use-case specific Metrics
+        plot_values(self.df, ["useless_steps"], log_path)
         # plot_values(self.df, ["do_nothing_opt_arr",
         #                       "do_nothing_sub_arr"], log_path)
         #plot_values(df, ["rewards", "epsilon"], log_path, double_scale=True)
@@ -224,9 +227,18 @@ class MultiTracker:
         self.adv_episode_rewards = 0
         self.adv_reward_counter = 0
 
+
     def track_reward_and_action(self, rewards, actions, states):
         for i, tracker in enumerate(self.trackers):
-            tracker.track_reward_and_action(rewards[i], actions[i], states[i])
+            tracker.track_reward_and_action(rewards[i], actions[i], states[i], multi_agent=True)
+
+        # check for useless steps for multi agent case
+        distances = [calc_distance(state) for state in states]
+        one_hot = [1 if dist == min(distances) else 0 for dist in distances]
+
+        for action, state, tracker, one_hot in zip(actions, states, self.trackers, one_hot):
+            if action != 6 and ((state[8] == -1 and state[7] == -1) or one_hot == 0):
+                tracker.useless_steps += 1
 
         # increase waiting time in every timestep
         self.waiting_time += 1
@@ -234,27 +246,6 @@ class MultiTracker:
     def track_adv_reward(self, reward):
         self.adv_episode_rewards += reward
         self.adv_reward_counter += 1
-
-    def track_actions(self, states, actions, comm=False):
-
-        def calc_distance(state):
-            return round(
-                math.sqrt((state[5] - state[7]) ** 2 +
-                          (state[6] - state[8]) ** 2), 2
-            )
-        distances = [calc_distance(state) for state in states]
-        one_hot_arr = [1 if dist == min(
-            distances) else 0 for dist in distances]
-
-        for action, state, tracker, one_hot in zip(actions, states, self.trackers, one_hot_arr):
-            tracker.track_actions(state, action)
-
-            if action != 6 and ((state[8] == -1 and state[7] == -1) or one_hot == 0):
-                tracker.useless_steps += 1
-
-    def track_epsilon(self, epsilon):
-        for i, tracker in enumerate(self.trackers):
-            tracker.track_epsilon(epsilon)
 
     def get_pick_ups(self):
         pick_ups = [tracker.get_pick_ups() for tracker in self.trackers]
@@ -279,27 +270,31 @@ class MultiTracker:
 
         if eval:
             log_path = os.path.join(log_path, "eval")
+
         if not os.path.exists(log_path):
             os.makedirs(log_path)
-        else: 
-            log_path += "2"
-            os.makedirs(log_path)
 
+        # Base Metric
         plot_mult_agent(dfs, ["rewards"], log_path)
         plot_mult_agent(dfs, ["n_passengers"], log_path)
-        # plot_mult_agent(dfs, ["useless_steps"], log_path)
-        # plot_mult_agent(dfs, ["illegal_pick_ups", "illegal_moves"], log_path)
+        plot_mult_agent(dfs, ["illegal_pick_ups", "illegal_moves"], log_path)
 
-        # plot_mult_agent(dfs, ["do_nothing_opt_arr",
-        #                       "do_nothing_sub_arr"], log_path)
-        
-        plot_values(dfs[0], ["avg_waiting_time"], log_path)
+        # Use-case specific metrics
+        plot_mult_agent(dfs, ["useless_steps"], log_path) 
+        #plot_values(dfs[0], ["avg_waiting_time"], log_path)
 
+        # save summed logs of agents
         summed_df = dfs[0]
         for i in range(1,len(dfs)): 
             summed_df += dfs[i]
         file_name = os.path.join(log_path, "logs_summed.csv")
         summed_df.to_csv(file_name)
 
-        plot_arr(self.adv_episode_reward_arr, log_path, "adv_rewards.png")
+        #plot_arr(self.adv_episode_reward_arr, log_path, "adv_rewards.png")
 
+
+def calc_distance(state):
+            return round(
+                math.sqrt((state[5] - state[7]) ** 2 +
+                          (state[6] - state[8]) ** 2), 2
+            )

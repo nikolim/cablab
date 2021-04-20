@@ -18,7 +18,7 @@ def train_ppo(n_episodes):
 
     Display().start()
 
-    env_name = "Cabworld-v1"
+    env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
     n_states = env.observation_space.shape[0]
@@ -42,11 +42,10 @@ def train_ppo(n_episodes):
         for _ in range(max_timesteps):
 
             action = ppo.policy_old.act(state, memory)
-            tracker.track_actions(state, action)
-            # old_state = state
+            old_state = state
             state, reward, done, _ = env.step(action)
             
-            tracker.track_reward(reward)
+            tracker.track_reward_and_action(reward, action, old_state)
             
             memory.rewards.append(reward)
             memory.is_terminal.append(done)
@@ -62,7 +61,6 @@ def train_ppo(n_episodes):
                 break
     
     print("Trained episodes: ", trained_episodes)
-
     ppo.save_model(log_path)
     plot_losses(ppo.losses)
     tracker.plot(log_path)
@@ -70,7 +68,7 @@ def train_ppo(n_episodes):
 
 def deploy_ppo(n_episodes, wait):
 
-    env_name = "Cabworld-v1"
+    env_name = "Cabworld-v0"
     env = gym.make(env_name)
 
     n_states = env.observation_space.shape[0]

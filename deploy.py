@@ -12,7 +12,15 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "-a", "--algorithm", type=str, required=True, help="Algorithm to run"
 )
-parser.add_argument("-n", "--number", required=True, help="Number of episodes to run")
+parser.add_argument("-n", "--number", type=int,
+                    required=True, help="Number of episodes to run")
+parser.add_argument(
+    "-env",
+    "--environment",
+    type=str,
+    required=True,
+    help="Select Environment Version",
+)
 parser.add_argument(
     "-w",
     "--wait",
@@ -20,14 +28,6 @@ parser.add_argument(
     type=float,
     default=0.05,
     help="Delay between actions",
-)
-parser.add_argument(
-    "-comm",
-    "--communication",
-    required=False,
-    type=bool,
-    default=False,
-    help="Predefined communication between agents",
 )
 parser.add_argument(
     "-r",
@@ -48,17 +48,19 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-valid_algorithms = ["ppo", "dqn"]
+valid_algorithms = ["ppo", "dqn", "ma-dqn"]
 
 if args.algorithm == "ppo":
     deploy_ppo(int(args.number), float(args.wait))
 elif args.algorithm == "dqn":
-    deploy_dqn(int(args.number), float(args.wait), eval=bool(args.eval),render=bool(args.render))
+    deploy_dqn(args.number, args.environment,
+               args.eval, args.render, args.wait)
 elif args.algorithm == "a2c":
     deploy_a2c(int(args.number), float(args.wait))
 elif args.algorithm == "rand":
     deploy_random(int(args.number), float(args.wait))
 elif args.algorithm == "ma-dqn":
-    deploy_ma_dqn(int(args.number), float(args.wait), comm=bool(args.communication), render=bool(args.render), eval=bool(args.eval))
+    deploy_ma_dqn(int(args.number), float(args.wait), comm=bool(
+        args.communication), render=bool(args.render), eval=bool(args.eval))
 else:
     print(f"Not a valid algorithm: {args.algorithm}")

@@ -155,11 +155,27 @@ def extend_single_agent_state(state):
         extended_state.append(0)
     return tuple(extended_state)
 
-
 def assign_passenger(state):
     extended_state = list(state)
     extended_state.append(random.randint(0,1))
     return tuple(extended_state)
+
+
+def single_agent_assignment(reward, action, state, next_state, tracker): 
+    if reward == 1: 
+        if action == 4:
+            if picked_up_assigned_psng(state): 
+                tracker.assigned_psng += 1
+                reward = 2
+            else:
+                tracker.wrong_psng += 1
+                reward = 0                    
+        else: 
+            # assign new passenger after drop-off
+            return assign_passenger(next_state), reward
+
+    # keep old assignment
+    return tuple((list(next_state)) + [state[-1]]), reward
 
 def picked_up_assigned_psng(state): 
     state = list(state)
@@ -201,4 +217,12 @@ def add_old_assignment(next_states, states):
     for next_state, state in zip(next_states,states): 
         new_states.append(tuple((list(next_state)) + [state[-1]]))
 
+    return new_states
+
+
+def append_other_agents_pos(states):
+    assert len(states) == 2
+    new_states = []
+    new_states.append(tuple(list(states[0]) + [states[1][5]] + [states[1][6]]))
+    new_states.append(tuple(list(states[0]) + [states[0][5]] + [states[0][6]]))
     return new_states

@@ -147,10 +147,11 @@ class DQN:
     def load_model(self, path):
         self.model.load_state_dict(torch.load(path, map_location=self.device))
         self.model.eval()
+        self
         print(f"Model loaded {path}")
 
     def deploy(self, s):
-        if random.random() < 0.01:
+        if random.random() < 0.05:
             return random.randint(0, 6)
         else:
             with torch.no_grad():

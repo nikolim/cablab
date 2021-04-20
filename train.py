@@ -16,15 +16,6 @@ parser.add_argument(
 )
 parser.add_argument("-n", "--number", required=True, help="Number of episodes to run")
 parser.add_argument(
-    "-m",
-    "--munchhausen",
-    type=bool,
-    default=False,
-    required=False,
-    help="Munchhausen add-on for DQN",
-)
-
-parser.add_argument(
     "-adv",
     "--advice",
     type=bool,
@@ -41,16 +32,21 @@ parser.add_argument(
     required=False,
     help="Communication for  MA-DQN",
 )
-
+parser.add_argument(
+    "-env",
+    "--environment",
+    type=str,
+    required=True,
+    help="Select Environment Version",
+)
 
 args = parser.parse_args()
-
-valid_algorithms = ["ppo", "dqn", "a2c", "rand"]
+valid_algorithms = ["ppo", "dqn", "ma-dqn"]
 
 if args.algorithm == "ppo":
     train_ppo(int(args.number))
 if args.algorithm == "dqn":
-    train_dqn(int(args.number), munchhausen=args.munchhausen)
+    train_dqn(int(args.number), env=args.environment)
 elif args.algorithm == "a2c":
     train_a2c(int(args.number))
 elif args.algorithm == "rand":
