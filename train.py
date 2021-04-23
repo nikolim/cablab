@@ -49,7 +49,7 @@ else:
     print(f"Please choose between: dqn, ppo, ma-dqn")
     quit()
 
-for _ in args.runs:
+for _ in range(args.runs):
     if args.algorithm == "ppo":
         train_ppo(n_episodes=args.number, version=args.environment)
     if args.algorithm == "dqn":

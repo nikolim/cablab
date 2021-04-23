@@ -209,7 +209,6 @@ def plot_mult_runs(dfs, ids, path, labels=None, double_scale=False):
         x = list(range(len(DF)))
 
         ax1.plot(x,meandf[id], color=color, label="Mean")
-
         #ax1.plot(x,mindf[id], color=color, label="Min")
         #ax1.plot(x,maxdf[id], color=color, label="Max")
 

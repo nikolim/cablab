@@ -245,7 +245,7 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
             # Stage 1 -> append positon of other agents
             states = append_other_agents_pos(states)
         elif cfg['adv']:    
-            adv_inputs = send_pos_to_other_cab(states)
+            adv_inputs = create_adv_inputs(states)
             msgs = []
             for i in range(n_agents):
                 msgs.append(adv.deploy((adv_inputs[i])))

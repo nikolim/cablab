@@ -53,6 +53,9 @@ def get_last_folder(algorithm):
 
 
 class Tracker:
+    """
+    Single Agent Tracker
+    """
     def __init__(self, version, logger=None) -> None:
         self.logger = logger if logger else False
         self.version = version
@@ -177,6 +180,9 @@ class Tracker:
 
 
 class MultiTracker:
+    """
+    Multi Agent Tracker
+    """
     def __init__(self, n_agents, version, logger=None):
 
         self.logger = logger if logger else False
