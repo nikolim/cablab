@@ -12,6 +12,17 @@
     "munchhausen": true, 
     "assign_psng": false, 
     "min_pick_ups": 1, 
+    "adv": true,
+    "adv_epsilon": 1,
+    "adv_replay_size": 10,
+    "adv_epsilon_decay": 0.99, 
+    "adv_epsilon_min": 0.01,
+    "episodes_only_adv": 100, 
+    "adv_memory_size": 1000,
+    "n_msg": 2,
+    "info": false,
     "entropy_tau": 0.03, 
-    "alpha": 0.9
+    "alpha": 0.9,
+    "common_reward": false,
+    "assign_factor": 2
 }

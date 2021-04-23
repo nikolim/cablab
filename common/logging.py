@@ -53,8 +53,9 @@ def get_last_folder(algorithm):
 
 
 class Tracker:
-    def __init__(self, logger=None) -> None:
+    def __init__(self, version, logger=None) -> None:
         self.logger = logger if logger else False
+        self.version = version
         self.df = pd.DataFrame()
         self.eps_counter = 0
         self.init_episode_vars()
@@ -160,23 +161,26 @@ class Tracker:
         if not os.path.exists(log_path):
             os.makedirs(log_path)
 
-        # Base Metric
+        # Base Metric -> plot for every run
         plot_values(self.df, ["rewards"], log_path)
         plot_values(self.df, ["n_passengers"], log_path)
         plot_values(self.df, ["illegal_pick_ups", "illegal_moves"], log_path)
         
         # Use-case specific Metrics
-        plot_values(self.df, ["useless_steps"], log_path)
-        # plot_values(self.df, ["do_nothing_opt_arr",
-        #                       "do_nothing_sub_arr"], log_path)
-        #plot_values(df, ["rewards", "epsilon"], log_path, double_scale=True)
-        #plot_values(df, ["assigned_psng", "wrong_psng"], log_path)
+        if self.version == "v0":
+            plot_values(self.df, ["useless_steps"], log_path)
+        elif self.version == "v1": 
+            plot_values(self.df, ["assigned_psng", "wrong_psng"], log_path)
+            # plot_values(self.df, ["do_nothing_opt_arr",
+            #                       "do_nothing_sub_arr"], log_path)
+            #plot_values(df, ["rewards", "epsilon"], log_path, double_scale=True)
 
 
 class MultiTracker:
-    def __init__(self, n_agents, logger=None):
+    def __init__(self, n_agents, version, logger=None):
 
         self.logger = logger if logger else False
+        self.version = version
         self.n_agents = n_agents
         self.trackers = []
         self.waiting_time = 0
@@ -280,8 +284,10 @@ class MultiTracker:
         plot_mult_agent(dfs, ["illegal_pick_ups", "illegal_moves"], log_path)
 
         # Use-case specific metrics
-        plot_mult_agent(dfs, ["useless_steps"], log_path) 
-        #plot_values(dfs[0], ["avg_waiting_time"], log_path)
+        if self.version == "v2":
+            plot_mult_agent(dfs, ["useless_steps"], log_path) 
+        elif self.version == "v3":
+            plot_values(dfs[0], ["avg_waiting_time"], log_path)
 
         # save summed logs of agents
         summed_df = dfs[0]

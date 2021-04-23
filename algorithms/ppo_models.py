@@ -26,24 +26,24 @@ class Memory:
 
 
 class ActorCritic(nn.Module):
-    def __init__(self, n_state, n_actions):
+    def __init__(self, n_state, n_actions, n_hidden):
         super(ActorCritic, self).__init__()
 
         self.actor = nn.Sequential(
-            nn.Linear(n_state, 64),
+            nn.Linear(n_state, n_hidden),
             nn.Tanh(),
-            nn.Linear(64, 64),
+            nn.Linear(n_hidden, n_hidden),
             nn.Tanh(),
-            nn.Linear(64, n_actions),
+            nn.Linear(n_hidden, n_actions),
             nn.Softmax(dim=-1),
         )
 
         self.critic = nn.Sequential(
-            nn.Linear(n_state, 64),
+            nn.Linear(n_state, n_hidden),
             nn.Tanh(),
-            nn.Linear(64, 64),
+            nn.Linear(n_hidden, n_hidden),
             nn.Tanh(),
-            nn.Linear(64, 1),
+            nn.Linear(n_hidden, 1),
         )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -79,29 +79,20 @@ class ActorCritic(nn.Module):
 
 
 class PPO:
-    def __init__(self, n_state, n_actions):
-        #self.lr_actor = 0.0001 # working with lowered rewards
-        #self.lr_critic = 0.001  # working with lowered rewards  
-        self.lr_actor = 0.001 # working with lowered rewards
-        self.lr_critic = 0.01  # working with lowered rewards  
-        self.betas = (0.9, 0.999)
-        self.gamma = 0.9
-        self.eps_clip = 0.2
-        self.K_epochs = 4
+    def __init__(self, n_state, n_actions, cfg):
+
+        self.gamma = cfg['gamma']
+        self.eps_clip = cfg['eps_clip']
+        self.K_epochs = cfg['K_epochs']
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.policy = ActorCritic(n_state, n_actions).to(self.device)
+        self.policy = ActorCritic(n_state, n_actions, cfg['n_hidden']).to(self.device)
         
-        #self.optimizer = torch.optim.Adam(
-        #    self.policy.parameters(), lr=self.lr, betas=self.betas
-        #)
-
         self.optimizer = torch.optim.Adam([
-                        {'params': self.policy.actor.parameters(), 'lr': self.lr_actor},
-                        {'params': self.policy.critic.parameters(), 'lr': self.lr_critic}
+                        {'params': self.policy.actor.parameters(), 'lr': cfg['lr_actor']},
+                        {'params': self.policy.critic.parameters(), 'lr': cfg['lr_critic']}
                     ])
-
-        self.policy_old = ActorCritic(n_state, n_actions).to(self.device)
+        self.policy_old = ActorCritic(n_state, n_actions, cfg['n_hidden']).to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
 
         self.MseLoss = nn.MSELoss()
