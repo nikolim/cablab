@@ -46,8 +46,13 @@ def train_dqn(n_episodes, version):
     for episode in range(n_episodes + cfg['episodes_without_training']):
 
         tracker.new_episode()
+
         if episode % cfg['target_update'] == 0:
             dqn.copy_target()
+
+        # temp pick-up and drop-off counter for v1
+        n_pick_ups = 0
+        n_drop_offs = 0
 
         policy = gen_epsilon_greedy_policy(dqn, cfg['epsilon'], n_actions)
         state = env.reset()
@@ -61,11 +66,34 @@ def train_dqn(n_episodes, version):
             next_state, reward, is_done, _ = env.step(action)
             tracker.track_reward_and_action(reward, action, state)
 
+            # additonal metric used to measure waiting time
+            if version == 'v1':
+                if reward == 1: 
+                    if action == 4: 
+                        
+                        # check which psng is picked-up 
+
+                        if round(state[5], 3) == round(state[7], 3) and round(state[6], 3) == round(state[8], 3):
+                            print("PSNG 1") 
+                        else: 
+                            print("PSNG 2")
+
+                        n_pick_ups +=1 
+                    else: 
+                        n_drop_offs += 1
+
+                if n_pick_ups == 2: 
+                    tracker.reset_waiting_time(log=True)
+                    n_pick_ups = 0
+                if n_drop_offs == 2: 
+                    tracker.reset_waiting_time(log=False)
+                    n_drop_offs = 0
+                    
             # optional assign passengers to prepare for multi-agent-env
             if cfg['assign_psng']:
                 next_state, reward = single_agent_assignment(
                     reward, action, state, next_state, tracker)
-
+            
             memory.append((state, action, next_state, reward, is_done))
 
             if episode > cfg['episodes_without_training'] and steps % cfg['update_freq'] == 0:
@@ -76,7 +104,7 @@ def train_dqn(n_episodes, version):
 
             if is_done:
                 print(
-                    f"Episode: {episode} \t Reward: {round(tracker.episode_reward,3)} \t Passengers {tracker.get_pick_ups()}"
+                    f"Episode: {episode} \t Reward: {tracker.episode_reward:.2f} \t Passengers {tracker.get_pick_ups()}"
                 )
                 if tracker.get_pick_ups() < cfg['min_pick_ups']:
                     for _ in range(min(env.spec.max_episode_steps, len(memory))):

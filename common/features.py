@@ -33,7 +33,7 @@ def add_msg_to_states(states, msgs):
     """
     new_states = []
     for state, msg in zip(states, msgs):
-        state_arr = list(state) + list(msg)
+        state_arr = list(state) + [msg]
         new_states.append(tuple(state_arr))
     return new_states
 
@@ -55,10 +55,12 @@ def single_agent_assignment(reward, action, state, next_state, tracker):
         if action == 4:
             if picked_up_assigned_psng(state):
                 tracker.assigned_psng += 1
-                reward = 2
+                reward = 5
+                print("A")
             else:
                 tracker.wrong_psng += 1
                 reward = 0
+                print("N")
         else:
             # assign new passenger after drop-off
             return assign_passenger(next_state), reward
@@ -104,10 +106,26 @@ def optimal_assignment(states):
     b_2 = calc_distance((states[1][5], states[1][6]),
                         (states[1][9], states[1][10]))
 
-    assignment = [0,1] if (a_1 + b_2) < (a_2 + b_1) else [1,0]
+    # assignment = [0,1] if (a_1 + b_2) < (a_2 + b_1) else [1,0]
+    assignment = [1,0] if (a_1 + b_2) < (a_2 + b_1) else [0,1]
+    return assignment
+    #return add_msg_to_states(states, assignment)
 
-    return add_msg_to_states(states, assignment)
+def optimal_assignment_adv(adv_input):
+    """
+    Calculate optimal assignment based on euclidean distance
+    """
+    a_1 = calc_distance((adv_input[0], adv_input[1]),
+                        (adv_input[4], adv_input[5]))
+    b_1 = calc_distance((adv_input[2], adv_input[3]),
+                        (adv_input[4], adv_input[5]))
 
+    a_2 = calc_distance((adv_input[0], adv_input[1]),
+                        (adv_input[6], adv_input[7]))
+    b_2 = calc_distance((adv_input[2], adv_input[3]),
+                        (adv_input[6], adv_input[7]))
+
+    return ([0,1] if (a_1 + b_2) < (a_2 + b_1) else [1,0])
 
 def add_old_assignment(next_states, states):
     """
@@ -127,5 +145,5 @@ def append_other_agents_pos(states):
     assert len(states) == 2
     new_states = []
     new_states.append(tuple(list(states[0]) + [states[1][5]] + [states[1][6]]))
-    new_states.append(tuple(list(states[0]) + [states[0][5]] + [states[0][6]]))
+    new_states.append(tuple(list(states[1]) + [states[0][5]] + [states[0][6]]))
     return new_states

@@ -42,6 +42,11 @@ def train_ppo(n_episodes, version):
     memory = Memory()
     ppo = PPO(n_states, n_actions, cfg)
 
+    # temp pick-up and drop-off counter for v1
+    n_pick_ups = 0
+    n_drop_offs = 0
+
+
     for episode in range(n_episodes):
         tracker.new_episode()
         state = env.reset()
@@ -50,6 +55,22 @@ def train_ppo(n_episodes, version):
             old_state = state
             state, reward, done, _ = env.step(action)
             tracker.track_reward_and_action(reward, action, old_state)
+
+             # additonal metric used to measure waiting time
+            if version == 'v1':
+                if reward == 1: 
+                    if action == 4: 
+                        n_pick_ups +=1 
+                    else: 
+                        n_drop_offs += 1
+
+                if n_pick_ups == 2: 
+                    tracker.reset_waiting_time(log=True)
+                    n_pick_ups = 0
+                if n_drop_offs == 2: 
+                    tracker.reset_waiting_time(log=False)
+                    n_drop_offs = 0
+
             memory.rewards.append(reward)
             memory.is_terminal.append(done)
             if done:
