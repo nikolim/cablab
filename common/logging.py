@@ -83,7 +83,7 @@ class Tracker:
         self.useless_steps = 0
 
         self.total_waiting_time = 0
-        self.reset_counter = 0
+        self.pick_up_counter = 0
         self.waiting_time = 0
 
         self.passenger = False
@@ -106,10 +106,10 @@ class Tracker:
             self.episode_dict["assigned_psng"] = self.assigned_psng
             self.episode_dict["wrong_psng"] = self.wrong_psng
 
-            if self.reset_counter == 0:
+            if self.pick_up_counter == 0:
                 avg_waiting_time = 1000
             else:
-                avg_waiting_time = (self.total_waiting_time / self.reset_counter) / 2
+                avg_waiting_time = self.total_waiting_time / self.pick_up_counter
             self.episode_dict["avg_waiting_time"] = avg_waiting_time 
 
             if len(self.drop_off_pick_up_steps) > 0:
@@ -126,10 +126,15 @@ class Tracker:
         self.init_episode_vars()
         self.eps_counter += 1
 
-    def reset_waiting_time(self, log=True):
-        if log:
-            self.reset_counter += 1
-            self.total_waiting_time += self.waiting_time
+        if (self.assigned_psng + self.wrong_psng) > 0:
+            assigned_ratio = self.assigned_psng / (self.assigned_psng + self.wrong_psng)
+            print(f'Assigned {round(assigned_ratio,3)} %')
+
+    def add_waiting_time(self):
+        self.pick_up_counter += 1
+        self.total_waiting_time += self.waiting_time
+
+    def reset_waiting_time(self):
         self.waiting_time = 0
 
     def track_reward_and_action(self, reward, action, state, multi_agent=False):
@@ -221,13 +226,13 @@ class MultiTracker:
         self.adv_episode_rewards = 0
         self.adv_episode_reward_arr = []
 
-    def reset_waiting_time(self, log=True):
-        if log:
-            self.reset_counter += 1
-            self.total_waiting_time += self.waiting_time
-        tmp = self.waiting_time
-        self.waiting_time = 0
-        return tmp
+    def add_waiting_time(self): 
+        for tracker in self.trackers: 
+            tracker.add_waiting_time()
+
+    def reset_waiting_time(self):
+        for tracker in self.trackers: 
+            tracker.reset_waiting_time()
 
     def write_to_log(self, str):
         if self.logger:
@@ -238,20 +243,11 @@ class MultiTracker:
             tracker.init_episode_vars()
 
     def new_episode(self):
+        for tracker in self.trackers:
+            tracker.new_episode()
 
         ratio = self.adv_episode_rewards / max(self.adv_reward_counter, 1)
         ratio = -1 if ratio == 0 else ratio
-
-        # metric shared between agents
-        if self.reset_counter == 0:
-            avg_waiting_time = 1000
-        else:
-            avg_waiting_time = (self.total_waiting_time / self.reset_counter)
-        
-        for tracker in self.trackers:
-            if tracker.eps_counter > 0:
-                tracker.episode_dict["avg_waiting_time"] = avg_waiting_time 
-            tracker.new_episode()
 
         self.adv_episode_reward_arr.append(ratio)
         self.adv_episode_rewards = 0

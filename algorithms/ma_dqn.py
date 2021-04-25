@@ -111,14 +111,17 @@ def train_ma_dqn(n_episodes, version):
                 next_states = append_other_agents_pos(next_states)
 
             if version == 'v3':
+                # additional metric for v3
                 for reward, action in zip(rewards, actions):
                     if reward == 1:
                         if action == 4:
                             n_pick_ups += 1
+                            tracker.add_waiting_time()
                         else:
                             n_drop_offs += 1
+
                 if n_pick_ups == 2:
-                    waiting_time = tracker.reset_waiting_time(log=True)
+                    waiting_time = tracker.reset_waiting_time()
                     n_pick_ups = 0
                     if cfg['adv']:
                         adv_reward = -(waiting_time / 1000)
@@ -126,7 +129,7 @@ def train_ma_dqn(n_episodes, version):
                         adv_memory.append((adv_inputs, assignment, adv_reward))
 
                 if n_drop_offs == 2:
-                    tracker.reset_waiting_time(log=True)
+                    tracker.reset_waiting_time()
                     n_drop_offs = 0
                     if cfg['adv']:
                         adv_inputs = create_adv_inputs(next_states)
@@ -148,8 +151,10 @@ def train_ma_dqn(n_episodes, version):
                 for reward, action, state, i in zip(rewards, actions, states, list(range(n_agents))):
                     if action == 4 and reward == 1:
                         if picked_up_assigned_psng(state):
+                            tracker.trackers[i].assigned_psng += 1
                             rewards[i] = rewards[i] * cfg['assign_factor']
                         else:
+                            tracker.trackers[i].wrong_psng += 1
                             rewards[i] = 0 # rewards[i] / cfg['assign_factor']
 
             if cfg['common_reward']:
@@ -238,6 +243,7 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
     # load model
     dqn = DQN(n_states, n_actions, cfg)
     current_model = os.path.join(current_folder, "dqn1.pth")
+    current_model = "/home/niko/Info/cablab/runs/dqn/40/dqn.pth"
     print(current_model)
     dqn.load_model(current_model)
 
@@ -276,6 +282,8 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
             old_states = states
             states, rewards, done, _ = env.step(actions)
 
+            tracker.track_reward_and_action(rewards, actions, states)
+
             if cfg['info']:
                 # Stage 1 -> append positon of other agents
                 states = append_other_agents_pos(states)
@@ -285,6 +293,7 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
                     if reward == 1:
                         if action == 4:
                             n_pick_ups += 1
+                            tracker.add_waiting_time()
                         else:
                             n_drop_offs += 1
 
@@ -293,17 +302,18 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
                     n_pick_ups = 0
 
                 if n_drop_offs == 2:
-                    tracker.reset_waiting_time(log=False)
+                    tracker.reset_waiting_time()
                     n_drop_offs = 0
                     if cfg['adv']:
-                        adv_inputs = create_adv_inputs(next_states)
+                        adv_inputs = create_adv_inputs(states)
                         assignment = adv[0].deploy(adv_inputs)
                         msgs = [0, 1] if assignment == 0 else [1, 0]
-                        next_states = add_msg_to_states(next_states, msgs)
-                    else:
+                        states = add_msg_to_states(states, msgs)
+                    if cfg['assign_psng']:
+                        states = optimal_assignment(states)
+                else:
+                    if cfg['adv'] or cfg['assign_psng']:
                         states = add_old_assignment(states, old_states)
-
-            tracker.track_reward_and_action(rewards, actions, states)
 
             if render:
                 env.render()
@@ -343,6 +353,7 @@ def train_only_adv(n_episodes, version):
 
     dqn = DQN(n_states, n_actions, cfg)
     current_model = os.path.join(current_folder, "dqn1.pth")
+    current_model = "/home/niko/Info/cablab/runs/dqn/40/dqn.pth"
     dqn.load_model(current_model)
 
     adv = AdvNet(n_input=n_agents*4, n_msg=n_agents)
@@ -351,7 +362,7 @@ def train_only_adv(n_episodes, version):
     for episode in range(n_episodes):
 
         tracker.new_episode()
-        tracker.reset_waiting_time(log=False)
+        tracker.reset_waiting_time()
 
         # temp pick-up and drop-off counter
         n_pick_ups = 0

@@ -43,7 +43,7 @@ def assign_passenger(state):
     Randomly assign passenger
     """
     extended_state = list(state)
-    extended_state.append(random.randint(0, 1))
+    extended_state.append(random.randint(0,1))
     return tuple(extended_state)
 
 
@@ -54,18 +54,16 @@ def single_agent_assignment(reward, action, state, next_state, tracker):
     if reward == 1:
         if action == 4:
             if picked_up_assigned_psng(state):
-                tracker.assigned_psng += 1
-                reward = 5
-                print("A")
+                #tracker.assigned_psng += 1
+                reward = 2
             else:
-                tracker.wrong_psng += 1
+                #tracker.wrong_psng += 1
                 reward = 0
-                print("N")
         else:
             # assign new passenger after drop-off
             return assign_passenger(next_state), reward
     # keep old assignment
-    return tuple((list(next_state)) + [state[-1]]), reward
+    return list(next_state) + [state[-1]], reward
 
 
 def picked_up_assigned_psng(state):
@@ -79,16 +77,16 @@ def picked_up_assigned_psng(state):
     elif round(state[5], 3) == round(state[9], 3) and round(state[6], 3) == round(state[10], 3):
         return True if state[-1] == 1 else False
     else:
-        #raise Exception("No-pick-up-possible")
-        return random.sample([True, False], 1)[0]
+        raise Exception("No-pick-up-possible")
+        #return random.sample([True, False], 1)[0]
 
 
 def random_assignment(states):
     """
     Append random but distinct assignments to states
     """
-    a = random.randint(0, 1)
-    b = 0 if a == 1 else 1
+    a = random.sample([-1,1],1)[0]
+    b = -1 if a == 1 else 1
     return add_msg_to_states(states, [a, b])
 
 
@@ -106,10 +104,10 @@ def optimal_assignment(states):
     b_2 = calc_distance((states[1][5], states[1][6]),
                         (states[1][9], states[1][10]))
 
-    # assignment = [0,1] if (a_1 + b_2) < (a_2 + b_1) else [1,0]
-    assignment = [1,0] if (a_1 + b_2) < (a_2 + b_1) else [0,1]
-    return assignment
-    #return add_msg_to_states(states, assignment)
+    #assignment = [0,1] if (a_1 + b_2) < (a_2 + b_1) else [1,0]
+    #assignment = [1,0] if (a_1 + b_2) < (a_2 + b_1) else [0,1]
+    assignment = [random.randint(0,1) for _ in range(2)]
+    return add_msg_to_states(states, assignment)
 
 def optimal_assignment_adv(adv_input):
     """

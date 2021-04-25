@@ -70,30 +70,22 @@ def train_dqn(n_episodes, version):
             if version == 'v1':
                 if reward == 1: 
                     if action == 4: 
-                        
-                        # check which psng is picked-up 
-
-                        if round(state[5], 3) == round(state[7], 3) and round(state[6], 3) == round(state[8], 3):
-                            print("PSNG 1") 
-                        else: 
-                            print("PSNG 2")
-
-                        n_pick_ups +=1 
+                        n_pick_ups +=1
+                        tracker.add_waiting_time() 
                     else: 
                         n_drop_offs += 1
-
                 if n_pick_ups == 2: 
-                    tracker.reset_waiting_time(log=True)
+                    tracker.reset_waiting_time()
                     n_pick_ups = 0
                 if n_drop_offs == 2: 
-                    tracker.reset_waiting_time(log=False)
+                    tracker.reset_waiting_time()
                     n_drop_offs = 0
                     
             # optional assign passengers to prepare for multi-agent-env
             if cfg['assign_psng']:
                 next_state, reward = single_agent_assignment(
                     reward, action, state, next_state, tracker)
-            
+
             memory.append((state, action, next_state, reward, is_done))
 
             if episode > cfg['episodes_without_training'] and steps % cfg['update_freq'] == 0:

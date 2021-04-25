@@ -24,9 +24,9 @@ color_dict = {
 
 # Seaborn backend
 sns.set()
-
 plt.figure(dpi=1200)
 
+smoothing_factor = 50
 
 def adjust_lightness(color, amount=0.5):
     try:
@@ -54,7 +54,7 @@ def smoothing_mean_std(arr, step_size):
 
 def plot_losses(arr): 
     fig, ax1 = plt.subplots()
-    mean_rewards, std_rewards, x = smoothing_mean_std(arr, step_size=10)
+    mean_rewards, std_rewards, x = smoothing_mean_std(arr, step_size=smoothing_factor)
     ax1.plot(mean_rewards)
     plt.savefig(os.path.join("losses.png"), dpi=1200)
 
@@ -68,7 +68,7 @@ def plot_values(df, ids, path, double_scale=False):
         ax2 = ax1.twinx()
         id = ids[0]
         data = df[id]
-        mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=10)
+        mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=smoothing_factor)
         ax1.set_ylabel(id, color=color_dict[id])
         ax1.plot(x, mean_rewards, color=color_dict[id], label=id)
         ax1.fill_between(
@@ -80,7 +80,7 @@ def plot_values(df, ids, path, double_scale=False):
         )
         id = ids[1]
         data = df[id]
-        mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=10)
+        mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=smoothing_factor)
         ax2.set_ylabel(id, color=color_dict[id])
         ax2.plot(x, mean_rewards, color=color_dict[id], label=id)
         ax2.fill_between(
@@ -93,7 +93,7 @@ def plot_values(df, ids, path, double_scale=False):
     else:
         for id in ids:
             data = df[id]
-            mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=10)
+            mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=smoothing_factor)
 
             ax1.plot(x, mean_rewards, color=color_dict[id], label=id)
             ax1.fill_between(
@@ -138,7 +138,7 @@ def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False, colors=None
                 if colors: 
                     color = colors[i]
 
-                mean_metric, std_metric, x = smoothing_mean_std(data, step_size=10)
+                mean_metric, std_metric, x = smoothing_mean_std(data, step_size=smoothing_factor)
                 ax1.set_ylabel(id)
                 label = labels[i] if labels else (id + str(i))
                 ax1.plot(x, mean_metric, color=color, label=label)
@@ -154,7 +154,7 @@ def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False, colors=None
                 data = df[id]
                 color = adjust_lightness(color_dict[id], amount)
 
-                mean_metric, std_metric, x = smoothing_mean_std(data, step_size=10)
+                mean_metric, std_metric, x = smoothing_mean_std(data, step_size=smoothing_factor)
                 ax2.set_ylabel(id)
                 label = labels[i] if labels else (id + str(i))
                 ax2.plot(x, mean_metric, color=color, label=label)
@@ -173,7 +173,7 @@ def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False, colors=None
                 color = adjust_lightness(color_dict[id], amount)
                 if colors: 
                     color = colors[i]
-                mean_metric, std_metric, x = smoothing_mean_std(data, step_size=10)
+                mean_metric, std_metric, x = smoothing_mean_std(data, step_size=smoothing_factor)
                 ax1.set_ylabel(id)
                 label = labels[i] if labels else (id + str(i))
                 ax1.plot(x, mean_metric, color=color, label=label)

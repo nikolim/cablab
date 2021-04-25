@@ -74,7 +74,7 @@ def train_ppo(n_episodes, version):
             memory.rewards.append(reward)
             memory.is_terminal.append(done)
             if done:
-                if tracker.get_pick_ups() > cfg['min_pick_ups']:
+                if tracker.get_pick_ups() >= cfg['min_pick_ups']:
                     ppo.update(memory, episode)
                 memory.clear()
                 print(
