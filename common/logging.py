@@ -135,7 +135,9 @@ class Tracker:
         self.total_waiting_time += self.waiting_time
 
     def reset_waiting_time(self):
+        tmp = self.waiting_time
         self.waiting_time = 0
+        return tmp
 
     def track_reward_and_action(self, reward, action, state, multi_agent=False):
         # track rewards
@@ -231,8 +233,10 @@ class MultiTracker:
             tracker.add_waiting_time()
 
     def reset_waiting_time(self):
+        tmp = None
         for tracker in self.trackers: 
-            tracker.reset_waiting_time()
+            tmp =tracker.reset_waiting_time()
+        return tmp
 
     def write_to_log(self, str):
         if self.logger:
@@ -247,7 +251,7 @@ class MultiTracker:
             tracker.new_episode()
 
         ratio = self.adv_episode_rewards / max(self.adv_reward_counter, 1)
-        ratio = -1 if ratio == 0 else ratio
+        ratio = -10 if ratio == 0 else ratio
 
         self.adv_episode_reward_arr.append(ratio)
         self.adv_episode_rewards = 0
@@ -322,6 +326,7 @@ class MultiTracker:
         plot_arr(self.adv_episode_reward_arr, log_path, "adv_rewards.png")
 
         print("Mean ADV Rewards" ,sum(self.adv_episode_reward_arr[1:])/(len(self.adv_episode_reward_arr)-1))
+    
 
 def calc_distance(state):
     return round(

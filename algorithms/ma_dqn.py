@@ -377,8 +377,12 @@ def train_only_adv(n_episodes, version):
         adv_inputs = create_adv_inputs(states)
         assignment = adv_policy(adv_inputs)
         msgs = [0, 1] if assignment == 0 else [1, 0]
+        msgs = random.sample([[0,1],[1,0]],1)[0]
         states = add_msg_to_states(states, msgs)
 
+        # compare with opt assignment 
+        # states = optimal_assignment(states)
+        
         is_done = False
         steps = 0
 
@@ -402,18 +406,20 @@ def train_only_adv(n_episodes, version):
                 if n_pick_ups == 2:
                     waiting_time = tracker.reset_waiting_time()
                     n_pick_ups = 0
-                    adv_reward = -(waiting_time / 100)
+                    adv_reward = waiting_time
                     tracker.track_adv_reward(adv_reward)
                     adv_memory.append((adv_inputs, assignment, adv_reward))
 
                 if n_drop_offs == 2:
-                    tracker.reset_waiting_time(log=False)
+                    tracker.reset_waiting_time()
                     n_drop_offs = 0
                     adv_inputs = create_adv_inputs(next_states)
                     assignment = adv_policy(adv_inputs)
                     msgs = [0, 1] if assignment == 0 else [1, 0]
-                    msgs = optimal_assignment_adv(adv_inputs)
-                    # msgs.reverse()
+                    msgs = [0,0]
+                    # compare with opt and rand assignment
+                    # msgs = optimal_assignment_adv(adv_inputs)
+                    # msgs = random.sample([[0,1],[1,0]],1)[0]
                     next_states = add_msg_to_states(next_states, msgs)
                 else:
                     next_states = add_old_assignment(next_states, states)
@@ -427,9 +433,7 @@ def train_only_adv(n_episodes, version):
             for i in range(n_agents):
 
                 if steps % cfg['update_freq'] == 0:
-                    pass
-                    #if episode > (cfg['episodes_without_training'] + n_episodes):
-                    #    adv.replay(adv_memory, cfg['adv_replay_size'])
+                    adv.replay(adv_memory, cfg['adv_replay_size'])
 
             if is_done:
                 print(

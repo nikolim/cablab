@@ -104,9 +104,8 @@ def optimal_assignment(states):
     b_2 = calc_distance((states[1][5], states[1][6]),
                         (states[1][9], states[1][10]))
 
-    #assignment = [0,1] if (a_1 + b_2) < (a_2 + b_1) else [1,0]
-    #assignment = [1,0] if (a_1 + b_2) < (a_2 + b_1) else [0,1]
-    assignment = [random.randint(0,1) for _ in range(2)]
+    assignment = [0,1] if (a_1 + b_2) < (a_2 + b_1) else [1,0]
+    #assignment = [random.randint(0,1) for _ in range(2)]
     return add_msg_to_states(states, assignment)
 
 def optimal_assignment_adv(adv_input):
