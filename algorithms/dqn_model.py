@@ -7,28 +7,26 @@ import copy
 import os
 
 torch.manual_seed(0)
-
 counter = 0
 
-
 class DQN:
-    def __init__(self, n_state, n_action, n_hidden=16, lr=0.01):
+    def __init__(self, n_state, n_action, cfg):
         self.criterion = torch.nn.MSELoss()
         self.model = torch.nn.Sequential(
-            torch.nn.Linear(n_state, n_hidden),
+            torch.nn.Linear(n_state, cfg['n_hidden']),
             torch.nn.ReLU(),
-            torch.nn.Linear(n_hidden, n_hidden),
+            torch.nn.Linear(cfg['n_hidden'], cfg['n_hidden']),
             torch.nn.ReLU(),
-            torch.nn.Linear(n_hidden, n_action),
+            torch.nn.Linear(cfg['n_hidden'], n_action),
         )
         self.model_target = copy.deepcopy(self.model)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), cfg['lr'])
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.losses = []
 
         # needed for munchhausen
-        self.entropy_tau = 0.03
-        self.alpha = 0.9
+        self.entropy_tau = cfg['entropy_tau']
+        self.alpha = cfg['alpha']
 
     def sample(self, memory, replay_size):
 
@@ -70,7 +68,7 @@ class DQN:
 
         self.optimizer.zero_grad()
 
-        states, actions, rewards, next_states, dones = self.sample(memory, replay_size)
+        states, actions, rewards, next_states, dones = self.sample(memory, min(len(memory),replay_size))
 
         q_values = self.model(states)
         q_values_next = self.model_target(next_states).detach()

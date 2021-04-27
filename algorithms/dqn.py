@@ -1,132 +1,165 @@
-from math import log
 import os
+import json
 import time
+import shutil
 import logging
 import numpy as np
-from pyvirtualdisplay import Display
 from collections import deque
+from pyvirtualdisplay import Display
 
 import gym
 import gym_cabworld
 
-from algorithms.dqn_model import DQN, gen_epsilon_greedy_policy
-from common.logging import create_log_folder, create_logger, get_last_folder
-from common.logging import Tracker
+from algorithms.dqn_model import *
+from common.logging import *
+from common.features import *
 
+cfg_path = "configs"
+dqn_cfg_file = "dqn_conf.json"
+dqn_cfg_file_path = os.path.join(cfg_path, dqn_cfg_file)
 
-# Fill buffer
-episodes_without_training = 100
+def train_dqn(n_episodes, version):
 
-
-def train_dqn(n_episodes, munchhausen=False):
-
+    # Start virtual display
     disp = Display()
     disp.start()
 
-    env_name = "Cabworld-v0"
+    # Load configuration
+    cfg = json.load(open(dqn_cfg_file_path))
+
+    env_name = 'Cabworld-' + version
     env = gym.make(env_name)
 
-    n_states = env.observation_space.shape[1]
+    n_states = env.observation_space.shape[0] + (1 if cfg['assign_psng'] else 0)
     n_actions = env.action_space.n
-    n_hidden = 32
-
-    lr = 0.001
-    gamma = 0.975
-    epsilon = 1
-    epsilon_decay = 0.9975
-    replay_size = 100
-    target_update = 5
 
     log_path = create_log_folder("dqn")
-    logger = create_logger(log_path)
-    tracker = Tracker()
+    tracker = Tracker(version)
 
-    dqn = DQN(n_states, n_actions, n_hidden, lr)
+    # copy config-file into log-folder
+    shutil.copyfile(dqn_cfg_file_path, os.path.join(log_path, dqn_cfg_file))
 
-    memory = deque(maxlen=episodes_without_training * 1000)
+    dqn = DQN(n_states, n_actions, cfg)
+    memory = deque(maxlen=cfg['episodes_without_training'] *
+                   env.spec.max_episode_steps)
 
-    for episode in range(n_episodes + episodes_without_training):
+    for episode in range(n_episodes + cfg['episodes_without_training']):
 
         tracker.new_episode()
 
-        if episode % target_update == 0:
+        if episode % cfg['target_update'] == 0:
             dqn.copy_target()
 
-        policy = gen_epsilon_greedy_policy(dqn, epsilon, n_actions)
-        state = env.reset()
+        # temp pick-up and drop-off counter for v1
+        n_pick_ups = 0
+        n_drop_offs = 0
 
+        policy = gen_epsilon_greedy_policy(dqn, cfg['epsilon'], n_actions)
+        state = env.reset()
+        state = assign_passenger(state) if cfg['assign_psng'] else state
         is_done = False
         steps = 0
 
-        action = 0
-
         while not is_done:
-
             steps += 1
             action = policy(state)
-
-            tracker.track_actions(state, action)
-
             next_state, reward, is_done, _ = env.step(action)
-            tracker.track_reward(reward)
+            tracker.track_reward_and_action(reward, action, state)
+
+            # additonal metric used to measure waiting time
+            if version == 'v1':
+                if reward == 1: 
+                    if action == 4: 
+                        n_pick_ups +=1
+                        tracker.add_waiting_time() 
+                    else: 
+                        n_drop_offs += 1
+                if n_pick_ups == 2: 
+                    tracker.reset_waiting_time()
+                    n_pick_ups = 0
+                if n_drop_offs == 2: 
+                    tracker.reset_waiting_time()
+                    n_drop_offs = 0
+                    
+            # optional assign passengers to prepare for multi-agent-env
+            if cfg['assign_psng']:
+                next_state, reward = single_agent_assignment(
+                    reward, action, state, next_state, tracker)
+
             memory.append((state, action, next_state, reward, is_done))
 
-            if episode > episodes_without_training and steps % 10 == 0:
-                if munchhausen:
-                    dqn.replay_munchhausen(memory, replay_size, gamma)
+            if episode > cfg['episodes_without_training'] and steps % cfg['update_freq'] == 0:
+                if cfg['munchhausen']:
+                    dqn.replay_munchhausen(memory, cfg['replay_size'], cfg['gamma'])
                 else:
-                    dqn.replay(memory, replay_size, gamma)
+                    dqn.replay(memory, cfg['replay_size'], cfg['gamma'])
 
             if is_done:
                 print(
-                    f"Episode: {episode} Reward: {tracker.episode_reward} Passengers {tracker.get_pick_ups()}"
+                    f"Episode: {episode} \t Reward: {tracker.episode_reward:.2f} \t Passengers {tracker.get_pick_ups()}"
                 )
-                if tracker.get_pick_ups() < 1:
-                    for _ in range(1000):
+                if tracker.get_pick_ups() < cfg['min_pick_ups']:
+                    for _ in range(min(env.spec.max_episode_steps, len(memory))):
                         memory.pop()
-
                 break
+
             state = next_state
 
-        if episode > episodes_without_training:
-            epsilon = max(epsilon * epsilon_decay, 0.01)
-
-        if episode > 0:
-            tracker.track_epsilon(epsilon)
+        if episode > cfg['episodes_without_training']:
+            cfg['epsilon'] = max(cfg['epsilon'] * cfg['epsilon_decay'], cfg['epsilon_min'])
 
     dqn.save_model(log_path)
     tracker.plot(log_path)
 
 
-def deploy_dqn(n_episodes, wait):
+def deploy_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
 
-    env_name = "Cabworld-v0"
+    # load config
+    current_folder = get_last_folder("dqn")
+    cfg_file_path = os.path.join(current_folder, dqn_cfg_file)
+    cfg = json.load(open(cfg_file_path))
+    print(f'Config loaded: {cfg_file_path}')
+
+    tracker = Tracker(version) if eval else False
+
+    if not render:
+        disp = Display()
+        disp.start()
+
+    env_name = "Cabworld-" + version
     env = gym.make(env_name)
 
-    n_states = env.observation_space.shape[1]
+    n_states = env.observation_space.shape[0] + (1 if cfg['assign_psng'] else 0)
     n_actions = env.action_space.n
-    n_hidden = 32
-
-    dqn = DQN(n_states, n_actions, n_hidden)
-
-    current_folder = get_last_folder("dqn")
-    if not current_folder:
-        print("No model")
-        return
+    
+    # load model
+    dqn = DQN(n_states, n_actions, cfg)
     current_model = os.path.join(current_folder, "dqn.pth")
     print(current_model)
     dqn.load_model(current_model)
 
-    for _ in range(n_episodes):
+    for episode in range(n_episodes):
+        if tracker:
+            tracker.new_episode()
         state = env.reset()
+        state = assign_passenger(state) if cfg['assign_psng'] else state
         episode_reward = 0
         done = False
         while not done:
             action = dqn.deploy(state)
+            old_state = state
             state, reward, done, _ = env.step(action)
+            if eval:
+                tracker.track_reward_and_action(reward, action, old_state)
+            if cfg['assign_psng']: 
+                state, _ = single_agent_assignment(
+                    reward, action, old_state, state, tracker)                
             episode_reward += reward
-            env.render()
-            time.sleep(wait)
+            if render:
+                env.render()
+                time.sleep(wait)
             if done:
-                print(f"Reward {episode_reward}")
+                print(f'Episode: {episode} \t Reward: {round(episode_reward,3)}')
                 break
+    if eval:
+        tracker.plot(log_path=current_folder, eval=True)

@@ -2,133 +2,145 @@ import math
 import random
 
 
-def clip_state(state, n):
-    clipped_state = (list(state))[:n]
-    missing_pos = [0] * (len(state) - n)
-    clipped_state += missing_pos
-    return tuple(clipped_state)
+def calc_distance(pos1, pos2):
+    """
+    Calculate euclidean distance between two positions 
+    """
+    return round(math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2), 3)
 
 
-def cut_off_state(state, n):
-    state = list(state)
-    state = state[:n]
-    return tuple(state)
-
-
-def passenger_potential(state, next_state):
-    # increased potential for pick up or drop off
-    potential = 1 if state[4] != next_state[4] else 0
-    return potential
-
-
-def calc_add_signal(state):
-
-    # calc distance cab to nearest passenger
-    x_delta = state[6] - state[8]
-    y_delta = state[7] - state[9]
-    distance = math.sqrt((x_delta) ** 2 + (y_delta) ** 2) / math.sqrt(2)
-    return 1 - distance
-
-
-def calc_potential(state, next_state, gamma):
-
-    pot_state = calc_add_signal(state)
-    pot_next_state = calc_add_signal(next_state)
-
-    state_potential = gamma * pot_next_state - pot_state
-
-    return state_potential * 10
-
-
-def calc_shorter_way(states):
-    def calc_distance(state):
-        return round(
-            math.sqrt((state[5] - state[7]) ** 2 + (state[6] - state[8]) ** 2), 2
-        )
-
-    distances = [calc_distance(state) for state in states]
-    one_hot = [1 if dist == min(distances) else 0 for dist in distances]
-
-    # if distances are equal select one randomly
-    while one_hot.count(1) > 1:
-        idx = [index for index, value in enumerate(one_hot) if value == 1]
-        rand_idx = random.sample(idx, 1)[0]
-        one_hot[rand_idx] = 0
-
-    return one_hot
-
-
-# def add_msg_to_states(states):
-#
-#     new_states = []
-#     one_hot_msg = calc_shorter_way(states)
-#
-#     for state, msg in zip(states, one_hot_msg):
-#         state_arr = list(state)
-#         state_arr.append(msg)
-#         new_states.append(tuple(state_arr))
-#
-#     return new_states
-
-
-def send_pos_to_other_cab(states):
-
+def create_adv_inputs(states):
+    """
+    Create the input for the ADV Net: cab-positions + psng-positions
+    """
+    # For testing this only works for 2 agents and 2 passengers
     assert len(states) == 2
+    assert len(states[0]) == 11
 
-    # passenger is the same for all cabs
-    pass_x, pass_y = states[0][7], states[0][8]
+    # passengers are the same for all cabs
+    pass1_x, pass1_y = states[0][7], states[0][8]
+    pass2_x, pass2_y = states[0][9], states[0][10]
 
     cab1_pos_x, cab1_pos_y = states[0][5], states[0][6]
     cab2_pos_x, cab2_pos_y = states[1][5], states[1][6]
 
-    adv1 = [cab1_pos_x, cab1_pos_y, pass_x, pass_y, cab2_pos_x, cab1_pos_y]
-    adv2 = [cab2_pos_x, cab2_pos_y, pass_x, pass_y, cab1_pos_x, cab1_pos_y]
-
-    return [adv1, adv2]
+    return [cab1_pos_x, cab1_pos_y, cab2_pos_x, cab2_pos_y, pass1_x, pass1_y, pass2_x, pass2_y]
 
 
 def add_msg_to_states(states, msgs):
-
+    """
+    Concate respective states with msgs
+    """
     new_states = []
-
-    for state, msg in zip(states, msgs[::-1]):
-        state_arr = list(state)
-        state_arr.append(msg)
+    for state, msg in zip(states, msgs):
+        state_arr = list(state) + [msg]
         new_states.append(tuple(state_arr))
+    return new_states
+
+
+def assign_passenger(state):
+    """
+    Randomly assign passenger
+    """
+    extended_state = list(state)
+    extended_state.append(random.randint(0,1))
+    return tuple(extended_state)
+
+
+def single_agent_assignment(reward, action, state, next_state, tracker):
+    """
+    Randomly assign passenger after drop-off else keep old assignment
+    """
+    if reward == 1:
+        if action == 4:
+            if picked_up_assigned_psng(state):
+                #tracker.assigned_psng += 1
+                reward = 2
+            else:
+                #tracker.wrong_psng += 1
+                reward = 0
+        else:
+            # assign new passenger after drop-off
+            return assign_passenger(next_state), reward
+    # keep old assignment
+    return list(next_state) + [state[-1]], reward
+
+
+def picked_up_assigned_psng(state):
+    """
+    Check if the agent picked up the assigned passenger
+    Compare current postion of agent with the positions of the passengers
+    """
+    state = list(state)
+    if round(state[5], 3) == round(state[7], 3) and round(state[6], 3) == round(state[8], 3):
+        return True if state[-1] == 0 else False
+    elif round(state[5], 3) == round(state[9], 3) and round(state[6], 3) == round(state[10], 3):
+        return True if state[-1] == 1 else False
+    else:
+        raise Exception("No-pick-up-possible")
+        #return random.sample([True, False], 1)[0]
+
+
+def random_assignment(states):
+    """
+    Append random but distinct assignments to states
+    """
+    a = random.sample([-1,1],1)[0]
+    b = -1 if a == 1 else 1
+    return add_msg_to_states(states, [a, b])
+
+
+def optimal_assignment(states):
+    """
+    Calculate optimal assignment based on euclidean distance
+    """
+    a_1 = calc_distance((states[0][5], states[0][6]),
+                        (states[0][7], states[0][8]))
+    b_1 = calc_distance((states[1][5], states[1][6]),
+                        (states[1][7], states[1][8]))
+
+    a_2 = calc_distance((states[0][5], states[0][6]),
+                        (states[0][9], states[0][10]))
+    b_2 = calc_distance((states[1][5], states[1][6]),
+                        (states[1][9], states[1][10]))
+
+    assignment = [0,1] if (a_1 + b_2) < (a_2 + b_1) else [1,0]
+    #assignment = [random.randint(0,1) for _ in range(2)]
+    return add_msg_to_states(states, assignment)
+
+def optimal_assignment_adv(adv_input):
+    """
+    Calculate optimal assignment based on euclidean distance
+    """
+    a_1 = calc_distance((adv_input[0], adv_input[1]),
+                        (adv_input[4], adv_input[5]))
+    b_1 = calc_distance((adv_input[2], adv_input[3]),
+                        (adv_input[4], adv_input[5]))
+
+    a_2 = calc_distance((adv_input[0], adv_input[1]),
+                        (adv_input[6], adv_input[7]))
+    b_2 = calc_distance((adv_input[2], adv_input[3]),
+                        (adv_input[6], adv_input[7]))
+
+    return ([0,1] if (a_1 + b_2) < (a_2 + b_1) else [1,0])
+
+def add_old_assignment(next_states, states):
+    """
+    Keep assignment of previous state
+    """
+    new_states = []
+    for next_state, state in zip(next_states, states):
+        new_states.append(tuple((list(next_state)) + [state[-1]]))
 
     return new_states
 
 
-def calc_adv_rewards(adv_inputs, msgs):
-
-    rewards = []
-
-    for adv_input, msg in zip(adv_inputs, msgs):
-
-        my_distance = round(
-            math.sqrt(
-                (adv_input[0] - adv_input[2]) ** 2 + (adv_input[1] - adv_input[3]) ** 2
-            ),
-            2,
-        )
-        other_distance = round(
-            math.sqrt(
-                (adv_input[2] - adv_input[4]) ** 2 + (adv_input[3] - adv_input[5]) ** 2
-            ),
-            2,
-        )
-
-        delta = my_distance - other_distance
-
-        if delta > 0 and msg == 0:
-            reward = 1
-        elif delta <= 0 and msg == 0:
-            reward = -1
-        elif delta > 0 and msg == 1:
-            reward = -1
-        elif delta <= 0 and msg == 1:
-            reward = 1
-
-        rewards.append(reward)
-
-    return rewards
+def append_other_agents_pos(states):
+    """
+    Append the position of the other agent at the end of state
+    """
+    assert len(states) == 2
+    new_states = []
+    new_states.append(tuple(list(states[0]) + [states[1][5]] + [states[1][6]]))
+    new_states.append(tuple(list(states[1]) + [states[0][5]] + [states[0][6]]))
+    return new_states
