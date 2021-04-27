@@ -110,7 +110,7 @@ class Tracker:
                 avg_waiting_time = 1000
             else:
                 avg_waiting_time = self.total_waiting_time / self.pick_up_counter
-            self.episode_dict["avg_waiting_time"] = avg_waiting_time 
+            self.episode_dict["avg_waiting_time"] = avg_waiting_time
 
             if len(self.drop_off_pick_up_steps) > 0:
                 self.episode_dict["mean_pick_up_path"] = sum(
@@ -127,7 +127,8 @@ class Tracker:
         self.eps_counter += 1
 
         if (self.assigned_psng + self.wrong_psng) > 0:
-            assigned_ratio = self.assigned_psng / (self.assigned_psng + self.wrong_psng)
+            assigned_ratio = self.assigned_psng / \
+                (self.assigned_psng + self.wrong_psng)
             print(f'Assigned {round(assigned_ratio,3)} %')
 
     def add_waiting_time(self):
@@ -180,7 +181,7 @@ class Tracker:
     def get_pick_ups(self):
         return round(self.pick_ups / 2, 3)
 
-    def plot(self, log_path, eval=False):
+    def plot(self, log_path, eval=False, pre=False):
 
         file_name = os.path.join(log_path, "logs.csv")
         self.df.to_csv(file_name)
@@ -189,6 +190,11 @@ class Tracker:
             log_path = os.path.join(log_path, "eval")
         if not os.path.exists(log_path):
             os.makedirs(log_path)
+
+        # cut-off episodes without training for dqn
+        if pre:
+            self.df = self.df.shift(-pre)
+            self.df = self.df[:-pre]
 
         # Base Metric -> plot for every run
         plot_values(self.df, ["rewards"], log_path)
@@ -228,14 +234,14 @@ class MultiTracker:
         self.adv_episode_rewards = 0
         self.adv_episode_reward_arr = []
 
-    def add_waiting_time(self): 
-        for tracker in self.trackers: 
+    def add_waiting_time(self):
+        for tracker in self.trackers:
             tracker.add_waiting_time()
 
     def reset_waiting_time(self):
         tmp = None
-        for tracker in self.trackers: 
-            tmp =tracker.reset_waiting_time()
+        for tracker in self.trackers:
+            tmp = tracker.reset_waiting_time()
         return tmp
 
     def write_to_log(self, str):
@@ -290,7 +296,7 @@ class MultiTracker:
         do_nothing = [tracker.do_nothing for tracker in self.trackers]
         return do_nothing
 
-    def plot(self, log_path, eval=False):
+    def plot(self, log_path, eval=False, pre=False):
 
         dfs = []
         for i, tracker in enumerate(self.trackers):
@@ -303,6 +309,11 @@ class MultiTracker:
 
         if not os.path.exists(log_path):
             os.makedirs(log_path)
+
+        # cut-off episodes without training for dqn
+        if pre:
+            for i in range(len(dfs)):
+                dfs[i] = dfs[i][pre:]
 
         # Base Metric
         plot_mult_agent(dfs, ["rewards"], log_path)
@@ -325,8 +336,9 @@ class MultiTracker:
     def plot_adv_rewards(self, log_path):
         plot_arr(self.adv_episode_reward_arr, log_path, "adv_rewards.png")
 
-        print("Mean ADV Rewards" ,sum(self.adv_episode_reward_arr[1:])/(len(self.adv_episode_reward_arr)-1))
-    
+        print("Mean ADV Rewards", sum(
+            self.adv_episode_reward_arr[1:])/(len(self.adv_episode_reward_arr)-1))
+
 
 def calc_distance(state):
     return round(

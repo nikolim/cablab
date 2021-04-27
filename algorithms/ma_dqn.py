@@ -248,10 +248,11 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
     dqn.load_model(current_model)
 
     if cfg['adv']:
-        adv = AdvNet()
+        adv = AdvNet(n_input=n_agents*4, n_msg=n_agents)
         current_adv_model = os.path.join(
             current_folder, "adv1.pth"
         )
+        current_adv_model = "/home/niko/Info/cablab/runs/adv/20/adv1.pth"
         adv.load_model(current_adv_model)
 
     for episode in range(n_episodes):
@@ -263,9 +264,8 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
             states = append_other_agents_pos(states)
         elif cfg['adv']:
             adv_inputs = create_adv_inputs(states)
-            msgs = []
-            for i in range(n_agents):
-                msgs.append(adv.deploy((adv_inputs[i])))
+            assignment = adv.deploy(adv_inputs)
+            msgs = [0, 1] if assignment == 0 else [1, 0]
             states = add_msg_to_states(states, msgs)
         elif cfg['assign_psng']:
             states = optimal_assignment(states)
@@ -306,7 +306,7 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
                     n_drop_offs = 0
                     if cfg['adv']:
                         adv_inputs = create_adv_inputs(states)
-                        assignment = adv[0].deploy(adv_inputs)
+                        assignment = adv.deploy(adv_inputs)
                         msgs = [0, 1] if assignment == 0 else [1, 0]
                         states = add_msg_to_states(states, msgs)
                     if cfg['assign_psng']:
@@ -377,7 +377,7 @@ def train_only_adv(n_episodes, version):
         adv_inputs = create_adv_inputs(states)
         assignment = adv_policy(adv_inputs)
         msgs = [0, 1] if assignment == 0 else [1, 0]
-        msgs = random.sample([[0,1],[1,0]],1)[0]
+        # msgs = random.sample([[0,1],[1,0]],1)[0]
         states = add_msg_to_states(states, msgs)
 
         # compare with opt assignment 

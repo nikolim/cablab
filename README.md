@@ -70,13 +70,14 @@ error: the following arguments are required: -a/--algorithm, -n/--number, -env/-
 
 ### Plots 
 
-Every traning run creates basic plots and use-case specific plots.
+Every traning run creates basic plots and use-case specific plots. Example plots for Cabworld v0 for PPO, DQN and M-DQN
 <br>
 <p>
 	<div align="center">
-		<img width="auto" height="400px" src="img/rewards.png" align="center">
-		<img width="auto" height="400px" src="img/rewards_passengers.png" align="center">
-		<img width="auto" height="400px" src="img/pick_up_drop_off_path.png" align="center">
+		<img width="auto" height="300px" src="img/rewards_mult.png" align="center">
+		<img width="auto" height="300px" src="img/n_passengers_mult.png" align="center">
+		<img width="auto" height="300px" src="img/illegal_moves_mult.png" align="center">
+		<img width="auto" height="300px" src="img/useless_steps_mult.png" align="center">
 	</div>
 </p>
 <br>

@@ -20,9 +20,9 @@
     "n_msg": 2,
     "entropy_tau": 0.03, 
     "alpha": 0.9,
-    "common_reward": false,
+    "common_reward": true,
     "assign_factor": 2,
-    "assign_psng": true, 
-    "info": false,
+    "assign_psng": false, 
+    "info": true,
     "adv": false
 }

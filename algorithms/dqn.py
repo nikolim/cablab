@@ -109,7 +109,7 @@ def train_dqn(n_episodes, version):
             cfg['epsilon'] = max(cfg['epsilon'] * cfg['epsilon_decay'], cfg['epsilon_min'])
 
     dqn.save_model(log_path)
-    tracker.plot(log_path, )
+    tracker.plot(log_path)
 
 
 def deploy_dqn(n_episodes, version, eval=False, render=False, wait=0.05):

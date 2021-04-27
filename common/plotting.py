@@ -17,16 +17,17 @@ color_dict = {
     "do_nothing_sub_arr": "blueviolet",
     "epsilon": "orange",
     "useless_steps": "turquoise",
-    "wrong_psng": "red", 
-    "assigned_psng": "green", 
-    "avg_waiting_time": "darkorchid", 
+    "wrong_psng": "red",
+    "assigned_psng": "green",
+    "avg_waiting_time": "darkorchid",
 }
 
 # Seaborn backend
 sns.set()
 plt.figure(dpi=1200)
 
-smoothing_factor = 50
+smoothing_factor = 100
+
 
 def adjust_lightness(color, amount=0.5):
     try:
@@ -44,19 +45,36 @@ def smoothing_mean_std(arr, step_size):
     std_arr = np.array([])
 
     for i in range(0, len(arr), step_size):
-        array_slice = arr[i : i + step_size]
+        array_slice = arr[i: i + step_size]
         mean_arr = np.append(mean_arr, array_slice.mean())
         std_arr = np.append(std_arr, array_slice.std())
 
-    x_values = np.array(list(range(step_size, len(arr) + step_size, step_size)))
+    x_values = np.array(
+        list(range(step_size, len(arr) + step_size, step_size)))
 
     return mean_arr, std_arr, x_values
 
-def plot_losses(arr): 
+def smoothing(arr, step_size):
+
+    arr = np.array(arr)
+
+    for i in range(0, len(arr), step_size):
+        array_slice = arr[i: i + step_size]
+        mean_arr = np.append(mean_arr, array_slice.mean())
+
+    x_values = np.array(
+        list(range(step_size, len(arr) + step_size, step_size)))
+
+    return mean_arr, x_values
+
+
+def plot_losses(arr):
     fig, ax1 = plt.subplots()
-    mean_rewards, std_rewards, x = smoothing_mean_std(arr, step_size=smoothing_factor)
+    mean_rewards, std_rewards, x = smoothing_mean_std(
+        arr, step_size=smoothing_factor)
     ax1.plot(mean_rewards)
     plt.savefig(os.path.join("losses.png"), dpi=1200)
+
 
 def plot_values(df, ids, path, double_scale=False):
 
@@ -68,7 +86,8 @@ def plot_values(df, ids, path, double_scale=False):
         ax2 = ax1.twinx()
         id = ids[0]
         data = df[id]
-        mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=smoothing_factor)
+        mean_rewards, std_rewards, x = smoothing_mean_std(
+            data, step_size=smoothing_factor)
         ax1.set_ylabel(id, color=color_dict[id])
         ax1.plot(x, mean_rewards, color=color_dict[id], label=id)
         ax1.fill_between(
@@ -80,7 +99,8 @@ def plot_values(df, ids, path, double_scale=False):
         )
         id = ids[1]
         data = df[id]
-        mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=smoothing_factor)
+        mean_rewards, std_rewards, x = smoothing_mean_std(
+            data, step_size=smoothing_factor)
         ax2.set_ylabel(id, color=color_dict[id])
         ax2.plot(x, mean_rewards, color=color_dict[id], label=id)
         ax2.fill_between(
@@ -93,7 +113,8 @@ def plot_values(df, ids, path, double_scale=False):
     else:
         for id in ids:
             data = df[id]
-            mean_rewards, std_rewards, x = smoothing_mean_std(data, step_size=smoothing_factor)
+            mean_rewards, std_rewards, x = smoothing_mean_std(
+                data, step_size=smoothing_factor)
 
             ax1.plot(x, mean_rewards, color=color_dict[id], label=id)
             ax1.fill_between(
@@ -119,7 +140,7 @@ def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False, colors=None
     fig, ax1 = plt.subplots()
     ax1.set_xlabel("Episodes")
 
-    if colors: 
+    if colors:
         assert len(colors) == len(dfs)
 
     for id in ids:
@@ -134,11 +155,12 @@ def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False, colors=None
             for i, df in enumerate(dfs):
                 id = ids[0]
                 data = df[id]
-                
-                if colors: 
+
+                if colors:
                     color = colors[i]
 
-                mean_metric, std_metric, x = smoothing_mean_std(data, step_size=smoothing_factor)
+                mean_metric, std_metric, x = smoothing_mean_std(
+                    data, step_size=smoothing_factor)
                 ax1.set_ylabel(id)
                 label = labels[i] if labels else (id + str(i))
                 ax1.plot(x, mean_metric, color=color, label=label)
@@ -154,7 +176,8 @@ def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False, colors=None
                 data = df[id]
                 color = adjust_lightness(color_dict[id], amount)
 
-                mean_metric, std_metric, x = smoothing_mean_std(data, step_size=smoothing_factor)
+                mean_metric, std_metric, x = smoothing_mean_std(
+                    data, step_size=smoothing_factor)
                 ax2.set_ylabel(id)
                 label = labels[i] if labels else (id + str(i))
                 ax2.plot(x, mean_metric, color=color, label=label)
@@ -165,15 +188,16 @@ def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False, colors=None
                     alpha=0.2,
                     color=color,
                 )
-                
+
                 amount -= 0.5 / len(dfs)
-        else: 
+        else:
             for i, df in enumerate(dfs):
                 data = df[id]
                 color = adjust_lightness(color_dict[id], amount)
-                if colors: 
+                if colors:
                     color = colors[i]
-                mean_metric, std_metric, x = smoothing_mean_std(data, step_size=smoothing_factor)
+                mean_metric, std_metric, x = smoothing_mean_std(
+                    data, step_size=smoothing_factor)
                 ax1.set_ylabel(id)
                 label = labels[i] if labels else (id + str(i))
                 ax1.plot(x, mean_metric, color=color, label=label)
@@ -193,29 +217,31 @@ def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False, colors=None
     plt.savefig(os.path.join(path, name + "_mult.png"), dpi=1200)
 
 
-
 def plot_mult_runs(dfs, ids, path, labels=None, double_scale=False):
 
     fig, ax1 = plt.subplots()
     ax1.set_xlabel("Episodes")
-    
-    DF = pd.concat(dfs,keys=range(len(dfs))).groupby(level=1)
+
+    DF = pd.concat(dfs, keys=range(len(dfs))).groupby(level=1)
 
     meandf = DF.mean()
-    maxdf= DF.max()
-    mindf= DF.min()
-
+    maxdf = DF.max()
+    mindf = DF.min()
+    
     for i, id in enumerate(ids):
         color = color_dict[id]
-
         ax1.set_ylabel(id)
-        x = list(range(len(DF)))
 
-        ax1.plot(x,meandf[id], color=color, label="Mean")
+        mean_data, x = smoothing(meandf[id], step_size=smoothing_factor)
+        min_data, x = smoothing(mindf[id], step_size=smoothing_factor)
+        max_data, x = smoothing(maxdf[id], step_size=smoothing_factor)
+            
+
+        ax1.plot(x, mean_data, color=color, label="Mean")
         ax1.fill_between(
             x,
-            mindf[id],
-            maxdf[id],
+            min_data,
+            max_data,
             alpha=0.2,
             color=color,
         )
@@ -224,9 +250,13 @@ def plot_mult_runs(dfs, ids, path, labels=None, double_scale=False):
     fig.tight_layout()
     name = "_".join(ids)
 
+    file_name = os.path.join(path, "multi_run_df.csv")
+    DF.to_csv(file_name)
+
     plt.savefig(os.path.join(path, name + "_mult_runs.png"), dpi=1200)
 
-def plot_arr(arr, path, name): 
+
+def plot_arr(arr, path, name):
     fig, ax1 = plt.subplots()
     ax1.plot(arr[1:])
     plt.savefig(os.path.join(path, name), dpi=1200)
