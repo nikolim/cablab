@@ -26,7 +26,7 @@ color_dict = {
 sns.set()
 plt.figure(dpi=1200)
 
-smoothing_factor = 100
+smoothing_factor = 10
 
 
 def adjust_lightness(color, amount=0.5):

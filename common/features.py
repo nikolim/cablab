@@ -144,3 +144,7 @@ def append_other_agents_pos(states):
     new_states.append(tuple(list(states[0]) + [states[1][5]] + [states[1][6]]))
     new_states.append(tuple(list(states[1]) + [states[0][5]] + [states[0][6]]))
     return new_states
+
+
+def scale_rewards(): 
+    pass

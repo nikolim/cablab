@@ -93,8 +93,12 @@ class Tracker:
         self.assigned_psng = 0
         self.wrong_psng = 0
 
-    def new_episode(self):
-        if self.eps_counter > 0:
+        # additional metric for v1
+        self.n_pick_ups = 0
+        self.n_drop_offs = 0
+
+    def new_episode(self, save=True):
+        if self.eps_counter > 0 and save:
             self.episode_dict["rewards"] = self.episode_reward
             self.episode_dict["illegal_pick_ups"] = self.illegal_pick_up_ep
             self.episode_dict["illegal_moves"] = self.illegal_moves_ep
@@ -126,10 +130,6 @@ class Tracker:
         self.init_episode_vars()
         self.eps_counter += 1
 
-        if (self.assigned_psng + self.wrong_psng) > 0:
-            assigned_ratio = self.assigned_psng / \
-                (self.assigned_psng + self.wrong_psng)
-            print(f'Assigned {round(assigned_ratio,3)} %')
 
     def add_waiting_time(self):
         self.pick_up_counter += 1
@@ -180,6 +180,20 @@ class Tracker:
 
     def get_pick_ups(self):
         return round(self.pick_ups / 2, 3)
+
+    def track_pick_up_time(self, reward, action):
+        if reward == 1:
+            if action == 4:
+                self.n_pick_ups += 1
+                self.add_waiting_time()
+            else:
+                self.n_drop_offs += 1
+        if self.n_pick_ups == 2:
+            self.reset_waiting_time()
+            self.n_pick_ups = 0
+        if self.n_drop_offs == 2:
+            self.reset_waiting_time()
+            self.n_drop_offs = 0
 
     def plot(self, log_path, eval=False, pre=False):
 
@@ -252,9 +266,9 @@ class MultiTracker:
         for tracker in self.trackers:
             tracker.init_episode_vars()
 
-    def new_episode(self):
+    def new_episode(self, save=True):
         for tracker in self.trackers:
-            tracker.new_episode()
+            tracker.new_episode(save)
 
         ratio = self.adv_episode_rewards / max(self.adv_reward_counter, 1)
         ratio = -10 if ratio == 0 else ratio
@@ -338,6 +352,9 @@ class MultiTracker:
 
         print("Mean ADV Rewards", sum(
             self.adv_episode_reward_arr[1:])/(len(self.adv_episode_reward_arr)-1))
+
+    def plot_arr(self, arr, path, name):
+        plot_arr(arr, path, name)
 
 
 def calc_distance(state):

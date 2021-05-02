@@ -18,6 +18,7 @@ cfg_path = "configs"
 dqn_cfg_file = "dqn_conf.json"
 dqn_cfg_file_path = os.path.join(cfg_path, dqn_cfg_file)
 
+
 def train_dqn(n_episodes, version):
 
     # Start virtual display
@@ -30,7 +31,8 @@ def train_dqn(n_episodes, version):
     env_name = 'Cabworld-' + version
     env = gym.make(env_name)
 
-    n_states = env.observation_space.shape[0] + (1 if cfg['assign_psng'] else 0)
+    n_states = env.observation_space.shape[0] + \
+        (1 if cfg['assign_psng'] else 0)
     n_actions = env.action_space.n
 
     log_path = create_log_folder("dqn")
@@ -40,19 +42,16 @@ def train_dqn(n_episodes, version):
     shutil.copyfile(dqn_cfg_file_path, os.path.join(log_path, dqn_cfg_file))
 
     dqn = DQN(n_states, n_actions, cfg)
-    memory = deque(maxlen=cfg['episodes_without_training'] *
+    memory = deque(maxlen=cfg['replay_buffer_eps'] *
                    env.spec.max_episode_steps)
 
     for episode in range(n_episodes + cfg['episodes_without_training']):
 
-        tracker.new_episode()
+        save = episode >= cfg['episodes_without_training']
+        tracker.new_episode(save)
 
         if episode % cfg['target_update'] == 0:
             dqn.copy_target()
-
-        # temp pick-up and drop-off counter for v1
-        n_pick_ups = 0
-        n_drop_offs = 0
 
         policy = gen_epsilon_greedy_policy(dqn, cfg['epsilon'], n_actions)
         state = env.reset()
@@ -68,19 +67,8 @@ def train_dqn(n_episodes, version):
 
             # additonal metric used to measure waiting time
             if version == 'v1':
-                if reward == 1: 
-                    if action == 4: 
-                        n_pick_ups +=1
-                        tracker.add_waiting_time() 
-                    else: 
-                        n_drop_offs += 1
-                if n_pick_ups == 2: 
-                    tracker.reset_waiting_time()
-                    n_pick_ups = 0
-                if n_drop_offs == 2: 
-                    tracker.reset_waiting_time()
-                    n_drop_offs = 0
-                    
+                tracker.track_pick_up_time(reward, action)
+
             # optional assign passengers to prepare for multi-agent-env
             if cfg['assign_psng']:
                 next_state, reward = single_agent_assignment(
@@ -90,7 +78,8 @@ def train_dqn(n_episodes, version):
 
             if episode > cfg['episodes_without_training'] and steps % cfg['update_freq'] == 0:
                 if cfg['munchhausen']:
-                    dqn.replay_munchhausen(memory, cfg['replay_size'], cfg['gamma'])
+                    dqn.replay_munchhausen(
+                        memory, cfg['replay_size'], cfg['gamma'])
                 else:
                     dqn.replay(memory, cfg['replay_size'], cfg['gamma'])
 
@@ -106,7 +95,8 @@ def train_dqn(n_episodes, version):
             state = next_state
 
         if episode > cfg['episodes_without_training']:
-            cfg['epsilon'] = max(cfg['epsilon'] * cfg['epsilon_decay'], cfg['epsilon_min'])
+            cfg['epsilon'] = max(
+                cfg['epsilon'] * cfg['epsilon_decay'], cfg['epsilon_min'])
 
     dqn.save_model(log_path)
     tracker.plot(log_path)
@@ -129,9 +119,10 @@ def deploy_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
     env_name = "Cabworld-" + version
     env = gym.make(env_name)
 
-    n_states = env.observation_space.shape[0] + (1 if cfg['assign_psng'] else 0)
+    n_states = env.observation_space.shape[0] + \
+        (1 if cfg['assign_psng'] else 0)
     n_actions = env.action_space.n
-    
+
     # load model
     dqn = DQN(n_states, n_actions, cfg)
     current_model = os.path.join(current_folder, "dqn.pth")
@@ -151,15 +142,16 @@ def deploy_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
             state, reward, done, _ = env.step(action)
             if eval:
                 tracker.track_reward_and_action(reward, action, old_state)
-            if cfg['assign_psng']: 
+            if cfg['assign_psng']:
                 state, _ = single_agent_assignment(
-                    reward, action, old_state, state, tracker)                
+                    reward, action, old_state, state, tracker)
             episode_reward += reward
             if render:
                 env.render()
                 time.sleep(wait)
             if done:
-                print(f'Episode: {episode} \t Reward: {round(episode_reward,3)}')
+                print(
+                    f'Episode: {episode} \t Reward: {round(episode_reward,3)}')
                 break
     if eval:
         tracker.plot(log_path=current_folder, eval=True)

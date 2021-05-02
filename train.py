@@ -3,6 +3,7 @@ import argparse
 from algorithms.ppo import train_ppo
 from algorithms.dqn import train_dqn
 from algorithms.ma_dqn import train_ma_dqn
+from algorithms.adv import train_adv
 
 parser = argparse.ArgumentParser(
     description="Train: select algorithm and number of episodes"
@@ -44,12 +45,19 @@ elif args.algorithm in ["ma-dqn"]:
         print(f"{args.environment} is not a valid multi agent environment")
         print(f"Please choose between: v2 and v3")
         quit()
+elif args.algorithm == "adv":
+    train_adv(n_episodes=args.number, version=args.environment)
 else:
     print(f"Error: {args.algorithm} is not a valid algorithm")
-    print(f"Please choose between: dqn, ppo, ma-dqn")
+    print(f"Please choose between: dqn, ppo, ma-dqn, adv")
     quit()
 
-for _ in range(args.runs):
+for i in range(args.runs):
+
+    print('*'*50)
+    print(f'RUN{i}')
+    print('*'*50)
+
     if args.algorithm == "ppo":
         train_ppo(n_episodes=args.number, version=args.environment)
     if args.algorithm == "dqn":

@@ -20,11 +20,15 @@ class AdvNet:
             torch.nn.Linear(n_hidden, n_msg),
         )
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu")
 
     def sample(self, memory, replay_size):
 
-        replay_data = random.sample(memory, min(len(memory),replay_size))
+        if len(memory) < replay_size:
+            return
+
+        replay_data = random.sample(memory, min(len(memory), replay_size))
         states = (
             torch.from_numpy(np.stack([tmp[0] for tmp in replay_data]))
             .float()
@@ -69,4 +73,5 @@ class AdvNet:
     def deploy(self, s):
         with torch.no_grad():
             q_values = self.model(torch.Tensor(s))
-            return (torch.argmax(q_values)).item()
+            action = (torch.argmax(q_values)).item()
+            return [0, 1] if action == 0 else [1, 0]
