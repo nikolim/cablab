@@ -30,7 +30,7 @@ def train_ppo(n_episodes, version):
     env = gym.make(env_name)
 
     n_states = env.observation_space.shape[0]
-    n_actions = env.action_space.n
+    n_actions = env.action_space.n - 1
     max_timesteps = env.spec.max_episode_steps
 
     log_path = create_log_folder("ppo")

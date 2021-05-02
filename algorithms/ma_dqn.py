@@ -85,7 +85,7 @@ def train_ma_dqn(n_episodes, version):
             dqn, cfg['epsilon'], n_actions)
 
         if cfg['adv']:
-            adv_policy = gen_epsilon_greedy_policy_adv(
+            adv_policy = gen_epsilon_greedy_policy(
                 adv, adv_cfg['adv_epsilon'], adv_cfg['n_msg']
             )
         states = env.reset()
@@ -97,7 +97,8 @@ def train_ma_dqn(n_episodes, version):
             # Stage 2: Give active advice
             adv_inputs = create_adv_inputs(states)
             assignment = adv_policy(adv_inputs)
-            states = add_msg_to_states(states, assignment)
+            msgs = [0, 1] if assignment == 0 else [1, 0]
+            states = add_msg_to_states(states, msgs)
         if cfg['assign_psng']:
             # Assign passenger with predefined assignment strategy
             assignment = optimal_assignment(states)
@@ -146,13 +147,13 @@ def train_ma_dqn(n_episodes, version):
                     if cfg['adv']:
                         adv_inputs = create_adv_inputs(next_states)
                         assignment = adv_policy(adv_inputs)
+                        msgs = [0, 1] if assignment == 0 else [1, 0]
                         next_states = add_msg_to_states(
-                            next_states, assignment)
+                            next_states, msgs)
                     if cfg['assign_psng']:
                         assignment = optimal_assignment(next_states)
                         next_states = add_msg_to_states(
                             next_states, assignment)
-
                 else:
                     if cfg['adv'] or cfg['assign_psng']:
                         next_states = add_old_assignment(next_states, states)
@@ -195,7 +196,7 @@ def train_ma_dqn(n_episodes, version):
             if is_done:
                 adv_rewards = f"ADV {tracker.adv_episode_rewards}" if cfg['adv'] else ""
                 print(
-                    f"Episode: {episode} \t Reward: {tracker.get_rewards()} \t Passengers {tracker.get_pick_ups()}"
+                    f"Episode: {episode} \t Reward: {tracker.get_rewards()} \t Passengers {tracker.get_pick_ups()} {adv_rewards}"
                 )
                 # selective pops
                 if sum(tracker.get_pick_ups()) < cfg['min_pick_ups']:

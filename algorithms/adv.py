@@ -54,7 +54,6 @@ def train_adv(n_episodes, version):
                     os.path.join(log_path, adv_cfg_file))
 
     dqn = DQN(n_states, n_actions, cfg)
-
     # Select model trained on assigned passengers (single or multi-agent)
     current_model = "/home/niko/Info/cablab/runs/dqn/40/dqn.pth"
     dqn.load_model(current_model)
@@ -118,6 +117,7 @@ def train_adv(n_episodes, version):
                     if reward == 1:
                         if action == 4:
                             n_pick_ups += 1
+                            tracker.add_waiting_time()
                         else:
                             n_drop_offs += 1
 
@@ -131,8 +131,8 @@ def train_adv(n_episodes, version):
                 if n_drop_offs == 2:
                     tracker.reset_waiting_time()
                     n_drop_offs = 0
+                    adv_inputs = create_adv_inputs(next_states)
                     assignments = []
-
                     for adv_policy in adv_policies:
                         assignments.append(adv_policy(adv_inputs))
 
@@ -151,10 +151,6 @@ def train_adv(n_episodes, version):
                     next_states = add_old_assignment(next_states, states)
 
             tracker.track_reward_and_action(rewards, actions, states)
-
-            if cfg['common_reward']:
-                summed_rewards = sum(rewards)
-                rewards = [summed_rewards for _ in rewards]
 
             if episode >= adv_cfg['adv_eps_without_training']:
                 if steps % adv_cfg['update_freq'] == 0:
