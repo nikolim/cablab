@@ -27,6 +27,23 @@ def create_adv_inputs(states):
     return [cab1_pos_x, cab1_pos_y, cab2_pos_x, cab2_pos_y, pass1_x, pass1_y, pass2_x, pass2_y]
 
 
+def create_adv_inputs_single(states):
+    """
+    Create the input for the ADV Net: cab-positions + psng-positions
+    """
+    # For testing this only works for 2 agents and 2 passengers
+    assert len(states) == 2
+    assert len(states[0]) == 9
+
+    # passenger is the same for all cabs
+    pass1_x, pass1_y = states[0][7], states[0][8]
+
+    cab1_pos_x, cab1_pos_y = states[0][5], states[0][6]
+    cab2_pos_x, cab2_pos_y = states[1][5], states[1][6]
+
+    return [cab1_pos_x, cab1_pos_y, cab2_pos_x, cab2_pos_y, pass1_x, pass1_y]
+
+
 def add_msg_to_states(states, msgs):
     """
     Concate respective states with msgs
@@ -43,7 +60,7 @@ def assign_passenger(state):
     Randomly assign passenger
     """
     extended_state = list(state)
-    extended_state.append(random.randint(0,1))
+    extended_state.append(random.randint(0, 1))
     return tuple(extended_state)
 
 
@@ -68,7 +85,7 @@ def single_agent_assignment(reward, action, state, next_state, tracker):
 
 def picked_up_assigned_psng(state):
     """
-    Check if the agent picked up the assigned passenger
+    Check if the agent picked up the assigned passenger v3
     Compare current postion of agent with the positions of the passengers
     """
     state = list(state)
@@ -78,14 +95,19 @@ def picked_up_assigned_psng(state):
         return True if state[-1] == 1 else False
     else:
         raise Exception("No-pick-up-possible")
-        #return random.sample([True, False], 1)[0]
+        # return random.sample([True, False], 1)[0]
 
+def passenger_assigned(state):
+    """
+    Check if passenger was assinged v2
+    """
+    return state[-1] == 1 
 
 def random_assignment(states):
     """
     Append random but distinct assignments to states
     """
-    a = random.sample([-1,1],1)[0]
+    a = random.sample([-1, 1], 1)[0]
     b = -1 if a == 1 else 1
     return add_msg_to_states(states, [a, b])
 
@@ -104,9 +126,10 @@ def optimal_assignment(states):
     b_2 = calc_distance((states[1][5], states[1][6]),
                         (states[1][9], states[1][10]))
 
-    assignment = [0,1] if (a_1 + b_2) < (a_2 + b_1) else [1,0]
+    assignment = [0, 1] if (a_1 + b_2) < (a_2 + b_1) else [1, 0]
     #assignment = [random.randint(0,1) for _ in range(2)]
     return add_msg_to_states(states, assignment)
+
 
 def optimal_assignment_adv(adv_input):
     """
@@ -122,7 +145,8 @@ def optimal_assignment_adv(adv_input):
     b_2 = calc_distance((adv_input[2], adv_input[3]),
                         (adv_input[6], adv_input[7]))
 
-    return ([0,1] if (a_1 + b_2) < (a_2 + b_1) else [1,0])
+    return ([0, 1] if (a_1 + b_2) < (a_2 + b_1) else [1, 0])
+
 
 def add_old_assignment(next_states, states):
     """
@@ -131,7 +155,6 @@ def add_old_assignment(next_states, states):
     new_states = []
     for next_state, state in zip(next_states, states):
         new_states.append(tuple((list(next_state)) + [state[-1]]))
-
     return new_states
 
 
@@ -146,5 +169,9 @@ def append_other_agents_pos(states):
     return new_states
 
 
-def scale_rewards(): 
+def scale_rewards():
     pass
+
+
+def passenger_spawn(state, next_state):
+    return (state[7] == -1 and state[8] == -1) and (next_state[7] != -1 and next_state[8] != -1)

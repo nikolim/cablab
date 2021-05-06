@@ -5,9 +5,9 @@
     "adv_epsilon_decay": 0.995,
     "adv_epsilon_min": 0.01,
     "update_freq":10, 
-    "episodes_only_adv": 100,
+    "episodes_adv": 1000,
     "adv_eps_without_training": 100,
-    "adv_memory_size": 100,
+    "adv_memory_size": 5000,
     "n_msg": 2, 
-    "decentralized": true
+    "decentralized": false
 }

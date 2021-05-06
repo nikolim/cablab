@@ -34,11 +34,13 @@ def train_ma_dqn(n_episodes, version):
 
     assert [cfg['info'], cfg['adv'], cfg['assign_psng']].count(
         True) <= 1  # make sure to only select one option to extend state
-    cfg['episodes_only_adv'] = 0
+    cfg['episodes_adv'] = 0
     if cfg['adv']:
         # load seperate adv config file
         adv_cfg = json.load(open(adv_cfg_file_path))
-        cfg['episodes_only_adv'] = adv_cfg['episodes_only_adv']
+        cfg['episodes_adv'] = adv_cfg['episodes_adv']
+    else:
+        cfg['episodes_adv'] = 0
 
     env_name = 'Cabworld-' + version
     env = gym.make(env_name)
@@ -69,14 +71,15 @@ def train_ma_dqn(n_episodes, version):
                    * env.spec.max_episode_steps)
 
     if cfg['adv']:
-        adv = AdvNet(n_input=n_agents*4, n_msg=n_agents)
+        n_input = 6 if version == 'v2' else 8
+        adv = AdvNet(n_input=n_input, n_msg=n_agents)
         adv_memory = deque(maxlen=adv_cfg['adv_memory_size'])
 
-    for episode in range(n_episodes + cfg['episodes_without_training'] + adv_cfg['episodes_only_adv']):
+    for episode in range(n_episodes + cfg['episodes_without_training']):
 
         # do not log episodes used to fill buffer
-        save = episode >= cfg['episodes_without_training']
-        tracker.new_episode(save)
+        log_episode = episode >= cfg['episodes_without_training']
+        tracker.new_episode(log_episode)
 
         if episode % cfg['target_update'] == 0:
             dqn.copy_target()
@@ -95,19 +98,26 @@ def train_ma_dqn(n_episodes, version):
             states = append_other_agents_pos(states)
         if cfg['adv']:
             # Stage 2: Give active advice
-            adv_inputs = create_adv_inputs(states)
+            if version == 'v2':
+                adv_inputs = create_adv_inputs_single(states)
+            else:
+                adv_inputs = create_adv_inputs(states)
             assignment = adv_policy(adv_inputs)
             msgs = [0, 1] if assignment == 0 else [1, 0]
             states = add_msg_to_states(states, msgs)
         if cfg['assign_psng']:
             # Assign passenger with predefined assignment strategy
-            assignment = optimal_assignment(states)
-            states = add_msg_to_states(states, assignment)
+            # assignment = optimal_assignment(states)
+            msgs = random.sample([[0, 1], [1, 0]], 1)[0]
+            states = add_msg_to_states(states, msgs)
 
         is_done = False
         steps = 0
 
-        # temp pick-up and drop-off counter for v3
+        # temp action counter used as signal for v2
+        action_counter = 0
+
+        # temp pick-up and drop-off counter used as signal for v3
         n_pick_ups = 0
         n_drop_offs = 0
 
@@ -123,23 +133,56 @@ def train_ma_dqn(n_episodes, version):
             if cfg['info']:
                 next_states = append_other_agents_pos(next_states)
 
-            if version == 'v3':
-                # additional metric for v3
-                for reward, action in zip(rewards, actions):
-                    if reward == 1:
-                        if action == 4:
-                            n_pick_ups += 1
-                            tracker.add_waiting_time()
-                        else:
-                            n_drop_offs += 1
+            if version == 'v2' and (cfg['assign_psng'] or cfg['adv']):
+                if (passenger_spawn(states[0], next_states[0])):
+                    # reset action counter
+                    action_counter = 0
 
+            for reward, action in zip(rewards, actions):
+                if reward == 1:
+                    if action == 4:
+                        n_pick_ups += 1
+                        tracker.add_waiting_time()
+                    else:
+                        n_drop_offs += 1
+                if action != 6:
+                    action_counter += 1
+
+            if version == 'v2' and (cfg['assign_psng'] or cfg['adv']):
+                if n_pick_ups == 1:
+                    n_pick_ups = 0
+                    print(f'Action counter: {action_counter}')
+                    if cfg['adv']:
+                        # take actions taken from spawn until pickup as feedback for ADV
+                        adv_reward = -action_counter
+                        adv_memory.append((adv_inputs, assignment, adv_reward))
+                        if episode >= (cfg['episodes_without_training'] + n_episodes - cfg['episodes_adv']):
+                             tracker.track_adv_reward(adv_reward)
+
+                if (passenger_spawn(states[0], next_states[0])):
+                    # assign passenger randomly after spawn
+                    if cfg['assign_psng']:
+                        msgs = random.sample([[0, 1], [1, 0]], 1)[0]
+                        next_states = add_msg_to_states(next_states, msgs)
+                    if cfg['adv']:
+                        adv_inputs = create_adv_inputs_single(next_states)
+                        assignment = adv_policy(adv_inputs)
+                        msgs = [0, 1] if assignment == 0 else [1, 0]
+                        next_states = add_msg_to_states(
+                            next_states, msgs)
+                else:
+                    next_states = add_old_assignment(next_states, states)
+
+            if version == 'v3':
                 if n_pick_ups == 2:
                     waiting_time = tracker.reset_waiting_time()
                     n_pick_ups = 0
                     if cfg['adv']:
-                        adv_reward = -(waiting_time / 1000)
-                        tracker.track_adv_reward(adv_reward)
-                        adv_memory.append((adv_inputs, assignment, adv_reward))
+                        adv_reward = -waiting_time
+                        adv_memory.append(
+                            (adv_inputs, assignment, adv_reward))
+                        if episode >= (cfg['episodes_without_training'] + n_episodes - cfg['episodes_adv']):
+                            tracker.track_adv_reward(adv_reward)
 
                 if n_drop_offs == 2:
                     tracker.reset_waiting_time()
@@ -151,20 +194,21 @@ def train_ma_dqn(n_episodes, version):
                         next_states = add_msg_to_states(
                             next_states, msgs)
                     if cfg['assign_psng']:
-                        assignment = optimal_assignment(next_states)
+                        #assignment = optimal_assignment(next_states)
+                        msgs = random.sample([[0, 1], [1, 0]], 1)[0]
                         next_states = add_msg_to_states(
-                            next_states, assignment)
+                            next_states, msgs)
                 else:
                     if cfg['adv'] or cfg['assign_psng']:
                         next_states = add_old_assignment(next_states, states)
 
             tracker.track_reward_and_action(rewards, actions, states)
 
-            if version == 'v3' and (cfg['adv'] or cfg['assign_psng']):
-                # scale rewards for pick-up if passenger was assigned
-                for reward, action, state, i in zip(rewards, actions, states, list(range(n_agents))):
+            # Scale rewards
+            if cfg['adv'] or cfg['assign_psng']:
+                for reward, action, state, i in zip(rewards, actions, states, range(n_agents)):
                     if action == 4 and reward == 1:
-                        if picked_up_assigned_psng(state):
+                        if (version == 'v3' and picked_up_assigned_psng(state)) or (version == 'v2' and passenger_assigned(state)):
                             tracker.trackers[i].assigned_psng += 1
                             rewards[i] = rewards[i] * cfg['assign_factor']
                         else:
@@ -180,21 +224,23 @@ def train_ma_dqn(n_episodes, version):
                     (states[i], actions[i],
                      next_states[i], rewards[i], is_done)
                 )
-                if episode > cfg['episodes_without_training'] and steps % cfg['update_freq'] == 0:
 
-                    if episode > (cfg['episodes_without_training'] + n_episodes):
+            if episode > cfg['episodes_without_training'] and steps % cfg['update_freq'] == 0:
+
+                if cfg['adv']:
+                    if episode >= (cfg['episodes_without_training'] + n_episodes - cfg['episodes_adv']):
                         adv.replay(adv_memory, adv_cfg['adv_replay_size'])
 
-                    if cfg['munchhausen']:
-                        dqn.replay_munchhausen(
-                            memory, cfg['replay_size'], cfg['gamma']
-                        )
-                    else:
-                        dqn.replay(
-                            memory, cfg['replay_size'], cfg['gamma'])
+                if cfg['munchhausen']:
+                    dqn.replay_munchhausen(
+                        memory, cfg['replay_size'], cfg['gamma']
+                    )
+                else:
+                    dqn.replay(
+                        memory, cfg['replay_size'], cfg['gamma'])
 
             if is_done:
-                adv_rewards = f"ADV {tracker.adv_episode_rewards}" if cfg['adv'] else ""
+                adv_rewards = f"ADV {tracker.adv_episode_reward_arr[-1]:.2f}" if cfg['adv'] else ""
                 print(
                     f"Episode: {episode} \t Reward: {tracker.get_rewards()} \t Passengers {tracker.get_pick_ups()} {adv_rewards}"
                 )
@@ -206,7 +252,7 @@ def train_ma_dqn(n_episodes, version):
 
             states = next_states
 
-        if episode > cfg['episodes_without_training']:
+        if cfg['adv'] and episode > cfg['episodes_without_training']:
             adv_cfg['adv_epsilon'] = max(
                 adv_cfg['adv_epsilon'] * adv_cfg['adv_epsilon_decay'], adv_cfg['adv_epsilon'])
 
@@ -227,8 +273,8 @@ def train_ma_dqn(n_episodes, version):
 def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
 
     # load config
-    # current_folder = get_last_folder("ma-dqn")
-    current_folder = '/home/niko/Info/cablab/runs/ma-dqn/20/'
+    current_folder = get_last_folder("ma-dqn")
+    # current_folder = '/home/niko/Info/cablab/runs/ma-dqn/20/'
     cfg_file_path = os.path.join(current_folder, madqn_cfg_file)
     cfg = json.load(open(cfg_file_path))
     print(f'Config loaded: {cfg_file_path}')
@@ -261,8 +307,7 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
 
     # load model
     dqn = DQN(n_states, n_actions, cfg)
-    # current_model = os.path.join(current_folder, "dqn1.pth")
-    current_model = "/home/niko/Info/cablab/runs/dqn/40/dqn.pth"
+    current_model = os.path.join(current_folder, "dqn1.pth")
     print(current_model)
     dqn.load_model(current_model)
 
@@ -271,7 +316,6 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
         current_adv_model = os.path.join(
             current_folder, "adv1.pth"
         )
-        current_adv_model = "/home/niko/Info/cablab/runs/adv/35/adv2.pth"
         adv.load_model(current_adv_model)
 
     for episode in range(n_episodes):
@@ -284,9 +328,13 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
         elif cfg['adv']:
             adv_inputs = create_adv_inputs(states)
             assignment = adv.deploy(adv_inputs)
+            assignment = [random.randint(0,1) for _ in range(2)]
             states = add_msg_to_states(states, assignment)
         elif cfg['assign_psng']:
-            states = optimal_assignment(states)
+            #states = optimal_assignment(states)
+            msgs = random.sample([[0, 1], [1, 0]], 1)[0]
+            states = add_msg_to_states(
+                states, msgs)
 
         # temp pick up and drop off counter for v3
         n_pick_ups = 0
@@ -307,7 +355,7 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
                 states = append_other_agents_pos(states)
 
             if version == 'v3':
-                for reward, action in zip(rewards, actions):
+                for reward, action, state in zip(rewards, actions, old_states):
                     if reward == 1:
                         if action == 4:
                             n_pick_ups += 1
@@ -325,9 +373,12 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
                     if cfg['adv']:
                         adv_inputs = create_adv_inputs(states)
                         assignment = adv.deploy(adv_inputs)
+                        assignment = [random.randint(0,1) for _ in range(2)]
                         states = add_msg_to_states(states, assignment)
-                    if cfg['assign_psng']:
-                        states = optimal_assignment(states)
+                    elif cfg['assign_psng']:
+                        msgs = random.sample([[0, 1], [1, 0]], 1)[0]
+                        states = add_msg_to_states(
+                            states, msgs)
                 else:
                     if cfg['adv'] or cfg['assign_psng']:
                         states = add_old_assignment(states, old_states)
@@ -343,4 +394,3 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
 
     if eval:
         tracker.plot(log_path=current_folder, eval=True)
-
