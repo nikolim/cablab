@@ -77,54 +77,29 @@ def plot_losses(arr):
     plt.savefig(os.path.join("losses.png"), dpi=1200)
 
 
-def plot_values(df, ids, path, double_scale=False):
+def plot_values(df, ids, path):
 
     fig, ax1 = plt.subplots()
     ax1.set_xlabel("Episodes")
 
-    if double_scale:
-        assert len(ids) == 2
-        ax2 = ax1.twinx()
-        id = ids[0]
+    for id in ids:
         data = df[id]
         mean_rewards, std_rewards, x = smoothing_mean_std(
             data, step_size=smoothing_factor)
-        ax1.set_ylabel(id, color=color_dict[id])
-        ax1.plot(x, mean_rewards, color=color_dict[id], label=id)
+
+        try: 
+            color = color_dict[id]
+        except KeyError: 
+            color = 'black'
+
+        ax1.plot(x, mean_rewards, color=color, label=id)
         ax1.fill_between(
             x,
             mean_rewards + std_rewards,
             mean_rewards - std_rewards,
             alpha=0.2,
-            color=color_dict[id],
+            color=color,
         )
-        id = ids[1]
-        data = df[id]
-        mean_rewards, std_rewards, x = smoothing_mean_std(
-            data, step_size=smoothing_factor)
-        ax2.set_ylabel(id, color=color_dict[id])
-        ax2.plot(x, mean_rewards, color=color_dict[id], label=id)
-        ax2.fill_between(
-            x,
-            mean_rewards + std_rewards,
-            mean_rewards - std_rewards,
-            alpha=0.2,
-            color=color_dict[id],
-        )
-    else:
-        for id in ids:
-            data = df[id]
-            mean_rewards, std_rewards, x = smoothing_mean_std(
-                data, step_size=smoothing_factor)
-
-            ax1.plot(x, mean_rewards, color=color_dict[id], label=id)
-            ax1.fill_between(
-                x,
-                mean_rewards + std_rewards,
-                mean_rewards - std_rewards,
-                alpha=0.2,
-                color=color_dict[id],
-            )
 
     if len(ids) == 1:
         ax1.set_ylabel(ids[0])
@@ -136,7 +111,7 @@ def plot_values(df, ids, path, double_scale=False):
     plt.savefig(os.path.join(path, name + ".png"), dpi=1200)
 
 
-def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False, colors=None):
+def plot_mult_agent(dfs, ids, path, labels=None, colors=None):
 
     fig, ax1 = plt.subplots()
     ax1.set_xlabel("Episodes")
@@ -146,70 +121,30 @@ def plot_mult_agent(dfs, ids, path, labels=None, double_scale=False, colors=None
 
     for id in ids:
 
-        color = color_dict[id]
+        try:
+            color = color_dict[id]
+        except KeyError: 
+            color = 'black'
         amount = 1
 
-        if double_scale:
-            assert len(ids) == 2
-            ax2 = ax1.twinx()
-
-            for i, df in enumerate(dfs):
-                id = ids[0]
-                data = df[id]
-
-                if colors:
-                    color = colors[i]
-
-                mean_metric, std_metric, x = smoothing_mean_std(
-                    data, step_size=smoothing_factor)
-                ax1.set_ylabel(id)
-                label = labels[i] if labels else (id + str(i))
-                ax1.plot(x, mean_metric, color=color, label=label)
-                ax1.fill_between(
-                    x,
-                    mean_metric + std_metric,
-                    mean_metric - std_metric,
-                    alpha=0.2,
-                    color=color,
-                )
-
-                id = ids[1]
-                data = df[id]
-                color = adjust_lightness(color_dict[id], amount)
-
-                mean_metric, std_metric, x = smoothing_mean_std(
-                    data, step_size=smoothing_factor)
-                ax2.set_ylabel(id)
-                label = labels[i] if labels else (id + str(i))
-                ax2.plot(x, mean_metric, color=color, label=label)
-                ax2.fill_between(
-                    x,
-                    mean_metric + std_metric,
-                    mean_metric - std_metric,
-                    alpha=0.2,
-                    color=color,
-                )
-
-                amount -= 0.5 / len(dfs)
-        else:
-            for i, df in enumerate(dfs):
-                data = df[id]
-                color = adjust_lightness(color_dict[id], amount)
-                if colors:
-                    color = colors[i]
-                mean_metric, std_metric, x = smoothing_mean_std(
-                    data, step_size=smoothing_factor)
-                ax1.set_ylabel(id)
-                label = labels[i] if labels else (id + str(i))
-                ax1.plot(x, mean_metric, color=color, label=label)
-                ax1.fill_between(
-                    x,
-                    mean_metric + std_metric,
-                    mean_metric - std_metric,
-                    alpha=0.2,
-                    color=color,
-                )
-                amount -= 0.5 / len(dfs)
+        for i, df in enumerate(dfs):
+            data = df[id]
+            color = adjust_lightness(color_dict[id], amount)
+            if colors:
+                color = colors[i]
+            mean_metric, std_metric, x = smoothing_mean_std(
+                data, step_size=smoothing_factor)
+            ax1.set_ylabel(id)
+            label = labels[i] if labels else (id + str(i))
+            ax1.plot(x, mean_metric, color=color, label=label)
+            ax1.fill_between(
+                x,
+                mean_metric + std_metric,
+                mean_metric - std_metric,
+                alpha=0.2,
+                color=color,
+            )
+            amount -= 0.5 / len(dfs)
 
     plt.legend(loc="best")
     fig.tight_layout()

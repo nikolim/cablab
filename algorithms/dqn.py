@@ -1,5 +1,5 @@
 import os
-import json
+import toml
 import time
 import shutil
 import logging
@@ -15,7 +15,7 @@ from common.logging import *
 from common.features import *
 
 cfg_path = "configs"
-dqn_cfg_file = "dqn_conf.json"
+dqn_cfg_file = "dqn_conf.toml"
 dqn_cfg_file_path = os.path.join(cfg_path, dqn_cfg_file)
 
 
@@ -26,7 +26,7 @@ def train_dqn(n_episodes, version):
     disp.start()
 
     # Load configuration
-    cfg = json.load(open(dqn_cfg_file_path))
+    cfg = toml.load(open(dqn_cfg_file_path), _dict=dict)
 
     env_name = 'Cabworld-' + version
     env = gym.make(env_name)
@@ -113,7 +113,8 @@ def deploy_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
     # load config
     current_folder = get_last_folder("dqn")
     cfg_file_path = os.path.join(current_folder, dqn_cfg_file)
-    cfg = json.load(open(cfg_file_path))
+    cfg = toml.load(open(cfg_file_path), _dict=dict)
+    
     print(f'Config loaded: {cfg_file_path}')
 
     tracker = Tracker(version) if eval else False

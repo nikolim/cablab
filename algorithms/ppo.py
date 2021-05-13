@@ -1,6 +1,6 @@
 import os
 import time
-import json
+import toml
 import shutil
 import numpy as np
 from pyvirtualdisplay import Display
@@ -14,7 +14,7 @@ from common.logging import *
 from common.plotting import *
 
 cfg_path = "configs"
-ppo_cfg_file = "ppo_conf.json"
+ppo_cfg_file = "ppo_conf.toml"
 ppo_cfg_file_path = os.path.join(cfg_path, ppo_cfg_file)
 
 def train_ppo(n_episodes, version):
@@ -24,7 +24,7 @@ def train_ppo(n_episodes, version):
     disp.start()
 
     # Load configuration
-    cfg = json.load(open(ppo_cfg_file_path))
+    cfg = toml.load(open(ppo_cfg_file_path), _dict=dict)
 
     env_name = 'Cabworld-' + version
     env = gym.make(env_name)
@@ -81,7 +81,7 @@ def deploy_ppo(n_episodes, version, eval=False, render=False, wait=0.05):
     # load config
     current_folder = get_last_folder("ppo")
     cfg_file_path = os.path.join(current_folder, ppo_cfg_file)
-    cfg = json.load(open(cfg_file_path))
+    cfg = toml.load(open(cfg_file_path), _dict=dict)
 
     tracker = Tracker(version) if eval else False
 

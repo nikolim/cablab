@@ -56,7 +56,6 @@ class Tracker:
     """
     Single Agent Tracker
     """
-
     def __init__(self, version, logger=None) -> None:
         self.logger = logger if logger else False
         self.version = version
