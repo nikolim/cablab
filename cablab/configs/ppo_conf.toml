@@ -1,0 +1,24 @@
+title = "PPO config"
+
+# Use differnt lr for actor and critic
+lr_actor=0.0005 
+lr_critic=0.00015 
+
+# Optimizer config
+beta1=0.9 
+beta2=0.999 
+
+# Discount
+gamma=0.99
+
+# Clipping
+eps_clip=0.2 
+
+# Number of epochs to iterate over episode
+K_epochs=4
+
+# Size of respective neural network
+n_hidden= 64 
+
+# Minimum requirement to add episode to replay memory
+min_pick_ups= 1

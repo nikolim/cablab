@@ -1,0 +1,54 @@
+title = "Multi-Agent DQN config"
+
+lr=0.001 
+update_freq=10 
+gamma=0.9 
+epsilon=1
+epsilon_decay=0.995 
+epsilon_min=0.01
+replay_size= 100 
+target_update= 50 
+n_hidden= 64 
+
+# Run epsisodes without training to fill buffer
+episodes_without_training= 500 
+
+# Replay buffer size
+replay_buffer_eps= 500
+
+# Configuration needed for munchausen
+munchhausen= true 
+entropy_tau=0.03 
+alpha=0.9
+
+# Minimum requirement to add episode to replay memory
+min_pick_ups=1 
+
+# Train on common or seperate reward signal
+common_reward=false
+
+# Factor used to scale rewards
+assign_factor=2
+
+# Activate the differnt Stages 
+# Stage 1: everthing false
+# Stage 2: info=true 
+# Stage 3: adv=true
+assign_psng=false 
+info=false
+adv=true
+
+# Adv configurations
+adv_lr=0.01
+adv_epsilon= 1
+adv_replay_size= 10
+adv_epsilon_decay= 0.995
+adv_epsilon_min= 0.01
+episodes_adv= 100
+adv_eps_without_training= 100
+adv_memory_size= 5000
+
+n_msg= 2 
+
+# Used to check if agents agree after training
+decentralized= false
