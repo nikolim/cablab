@@ -20,13 +20,14 @@ color_dict = {
     "wrong_psng": "red",
     "assigned_psng": "green",
     "avg_waiting_time": "darkorchid",
+    "mean_actions_per_pick_up": "black"
 }
 
 # Seaborn backend
 sns.set()
 plt.figure(dpi=1200)
 
-smoothing_factor = 10
+smoothing_factor = 50
 
 
 def adjust_lightness(color, amount=0.5):

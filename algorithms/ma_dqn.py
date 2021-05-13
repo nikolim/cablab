@@ -135,8 +135,9 @@ def train_ma_dqn(n_episodes, version):
 
             if version == 'v2' and (cfg['assign_psng'] or cfg['adv']):
                 if (passenger_spawn(states[0], next_states[0])):
-                    # reset action counter
+                    # reset action counter if new passenger spawn
                     action_counter = 0
+                    tracker.action_counter = 0
 
             for reward, action in zip(rewards, actions):
                 if reward == 1:
@@ -151,7 +152,6 @@ def train_ma_dqn(n_episodes, version):
             if version == 'v2' and (cfg['assign_psng'] or cfg['adv']):
                 if n_pick_ups == 1:
                     n_pick_ups = 0
-                    print(f'Action counter: {action_counter}')
                     if cfg['adv']:
                         # take actions taken from spawn until pickup as feedback for ADV
                         adv_reward = -action_counter
@@ -274,16 +274,15 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
 
     # load config
     current_folder = get_last_folder("ma-dqn")
-    # current_folder = '/home/niko/Info/cablab/runs/ma-dqn/20/'
+    # current_folder = '/home/niko/Info/cablab/runs/ma-dqn/56/'
     cfg_file_path = os.path.join(current_folder, madqn_cfg_file)
     cfg = json.load(open(cfg_file_path))
     print(f'Config loaded: {cfg_file_path}')
     if cfg['adv']:
         # load seperate adv config file
-        config_folder = '/home/niko/Info/cablab/configs'
-        cfg_file_path = os.path.join(config_folder, adv_cfg_file)
+        cfg_file_path = os.path.join(current_folder, adv_cfg_file)
         adv_cfg = json.load(open(cfg_file_path))
-        print(f'Config loaded: {adv_cfg_file}')
+        print(f'Config loaded: {cfg_file_path}')
 
     env_name = "Cabworld-" + version
     env = gym.make(env_name)
@@ -312,7 +311,8 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
     dqn.load_model(current_model)
 
     if cfg['adv']:
-        adv = AdvNet(n_input=n_agents*4, n_msg=adv_cfg['n_msg'])
+        adv_inputs = 6 if version == "v2" else 8
+        adv = AdvNet(n_input=adv_inputs, n_msg=adv_cfg['n_msg'])
         current_adv_model = os.path.join(
             current_folder, "adv1.pth"
         )
@@ -326,9 +326,11 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
             # Stage 1 -> append positon of other agents
             states = append_other_agents_pos(states)
         elif cfg['adv']:
-            adv_inputs = create_adv_inputs(states)
+            if version == "v2": 
+                adv_inputs = create_adv_inputs_single(states)
+            else:
+                adv_inputs = create_adv_inputs(states)
             assignment = adv.deploy(adv_inputs)
-            assignment = [random.randint(0,1) for _ in range(2)]
             states = add_msg_to_states(states, assignment)
         elif cfg['assign_psng']:
             #states = optimal_assignment(states)
@@ -373,7 +375,6 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
                     if cfg['adv']:
                         adv_inputs = create_adv_inputs(states)
                         assignment = adv.deploy(adv_inputs)
-                        assignment = [random.randint(0,1) for _ in range(2)]
                         states = add_msg_to_states(states, assignment)
                     elif cfg['assign_psng']:
                         msgs = random.sample([[0, 1], [1, 0]], 1)[0]
