@@ -63,16 +63,17 @@ def train_dqn(n_episodes, version):
             steps += 1
             action = policy(state)
             next_state, reward, is_done, _ = env.step(action)
-            tracker.track_reward_and_action(reward, action, state)
-
+            
             # reset action counter after spawn
             if version == 'v0':
                 if passenger_spawn(state, next_state):
                     tracker.reset_action_counter()
-                    
+
             # additonal metric used to measure waiting time
             if version == 'v1':
                 tracker.track_pick_up_time(reward, action)
+
+            tracker.track_reward_and_action(reward, action, state)
             
             # optional assign passengers to prepare for multi-agent-env
             if cfg['assign_psng']:

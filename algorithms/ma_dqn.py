@@ -114,9 +114,6 @@ def train_ma_dqn(n_episodes, version):
         is_done = False
         steps = 0
 
-        # temp action counter used as signal for v2
-        action_counter = 0
-
         # temp pick-up and drop-off counter used as signal for v3
         n_pick_ups = 0
         n_drop_offs = 0
@@ -133,11 +130,9 @@ def train_ma_dqn(n_episodes, version):
             if cfg['info']:
                 next_states = append_other_agents_pos(next_states)
 
-            if version == 'v2' and (cfg['assign_psng'] or cfg['adv']):
-                if (passenger_spawn(states[0], next_states[0])):
-                    # reset action counter if new passenger spawn
-                    action_counter = 0
-                    tracker.action_counter = 0
+            if version == 'v2':
+                if passenger_spawn(states[0], next_states[0]):
+                    tracker.reset_action_counter()
 
             for reward, action in zip(rewards, actions):
                 if reward == 1:
@@ -146,20 +141,18 @@ def train_ma_dqn(n_episodes, version):
                         tracker.add_waiting_time()
                     else:
                         n_drop_offs += 1
-                if action != 6:
-                    action_counter += 1
 
             if version == 'v2' and (cfg['assign_psng'] or cfg['adv']):
                 if n_pick_ups == 1:
                     n_pick_ups = 0
                     if cfg['adv']:
                         # take actions taken from spawn until pickup as feedback for ADV
-                        adv_reward = -action_counter
+                        adv_reward = - tracker.reset_action_counter()
                         adv_memory.append((adv_inputs, assignment, adv_reward))
                         if episode >= (cfg['episodes_without_training'] + n_episodes - cfg['episodes_adv']):
                              tracker.track_adv_reward(adv_reward)
 
-                if (passenger_spawn(states[0], next_states[0])):
+                if passenger_spawn(states[0], next_states[0]):
                     # assign passenger randomly after spawn
                     if cfg['assign_psng']:
                         msgs = random.sample([[0, 1], [1, 0]], 1)[0]
@@ -209,10 +202,8 @@ def train_ma_dqn(n_episodes, version):
                 for reward, action, state, i in zip(rewards, actions, states, range(n_agents)):
                     if action == 4 and reward == 1:
                         if (version == 'v3' and picked_up_assigned_psng(state)) or (version == 'v2' and passenger_assigned(state)):
-                            tracker.trackers[i].assigned_psng += 1
                             rewards[i] = rewards[i] * cfg['assign_factor']
                         else:
-                            tracker.trackers[i].wrong_psng += 1
                             rewards[i] = 0  # rewards[i] / cfg['assign_factor']
 
             if cfg['common_reward']:
@@ -240,9 +231,8 @@ def train_ma_dqn(n_episodes, version):
                         memory, cfg['replay_size'], cfg['gamma'])
 
             if is_done:
-                adv_rewards = f"ADV {tracker.adv_episode_reward_arr[-1]:.2f}" if cfg['adv'] else ""
                 print(
-                    f"Episode: {episode} \t Reward: {tracker.get_rewards()} \t Passengers {tracker.get_pick_ups()} {adv_rewards}"
+                    f"Episode: {episode} \t Reward: {tracker.get_rewards()} \t Passengers {tracker.get_pick_ups()}"
                 )
                 # selective pops
                 if sum(tracker.get_pick_ups()) < cfg['min_pick_ups']:

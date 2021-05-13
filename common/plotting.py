@@ -20,7 +20,7 @@ color_dict = {
     "wrong_psng": "red",
     "assigned_psng": "green",
     "avg_waiting_time": "darkorchid",
-    "mean_actions_per_pick_up": "black"
+    "mean_actions_per_pick_up": "turquoise"
 }
 
 # Seaborn backend

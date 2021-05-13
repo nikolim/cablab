@@ -49,11 +49,17 @@ def train_ppo(n_episodes, version):
             action = ppo.policy_old.act(state, memory)
             old_state = state
             state, reward, done, _ = env.step(action)
-            tracker.track_reward_and_action(reward, action, old_state)
+            
+            # reset action counter after spawn
+            if version == 'v0':
+                if passenger_spawn(old_state, state):
+                    tracker.reset_action_counter()
 
+            # additonal metric used to measure waiting time
             if version == 'v1':
-                # additonal metric used to measure waiting time
-                tracker.track_pick_up_time(reward,action)
+                tracker.track_pick_up_time(reward, action)
+
+            tracker.track_reward_and_action(reward, action, old_state)
 
             memory.rewards.append(reward)
             memory.is_terminal.append(done)
