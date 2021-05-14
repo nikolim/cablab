@@ -23,9 +23,10 @@ madqn_cfg_file_path = os.path.join(abs_path, "../configs", madqn_cfg_file)
 
 
 def train_adv(n_episodes, version):
-
-    assert version == "v3"
-
+    """
+    Training only Adv on a pretrained models
+    """
+    
     # Start virtual display
     disp = Display()
     disp.start()
@@ -52,12 +53,13 @@ def train_adv(n_episodes, version):
 
     dqn = DQN(n_states, n_actions, cfg)
     # Select model trained on assigned passengers (single or multi-agent)
-    current_model = "/home/niko/Info/cablab/runs/dqn/40/dqn.pth"
+    current_model = "/home/niko/Info/cablab/runs/ma-dqn/3/dqn1.pth"
     dqn.load_model(current_model)
 
     advs = []
+    n_input = 6 if version == 'v2' else 8
     for _ in range(n_policies):
-        advs.append(AdvNet(n_input=n_agents*4, n_msg=n_agents, lr=cfg['adv_lr']))
+        advs.append(AdvNet(n_input=n_input, n_msg=n_agents, lr=cfg['adv_lr']))
 
     adv_memory = deque(maxlen=cfg['adv_memory_size'])
     consens_arr = []
@@ -80,7 +82,11 @@ def train_adv(n_episodes, version):
 
         states = env.reset()
 
-        adv_inputs = create_adv_inputs(states)
+        if version == 'v2':
+            adv_inputs = create_adv_inputs_single(states)
+        else:
+            adv_inputs = create_adv_inputs(states)
+
         assignments = []
         for adv_policy in adv_policies:
             assignments.append(adv_policy(adv_inputs))
@@ -108,6 +114,37 @@ def train_adv(n_episodes, version):
                 actions.append(dqn.deploy(states[i]))
 
             next_states, rewards, is_done, _ = env.step(actions)
+            tracker.track_reward_and_action(rewards, actions, states)
+
+            if version == 'v2':
+                if passenger_spawn(states[0], next_states[0]):
+                    tracker.reset_action_counter()
+
+            for reward, action in zip(rewards, actions):
+                if reward == 1:
+                    if action == 4:
+                        n_pick_ups += 1
+                        tracker.add_waiting_time()
+                    else:
+                        n_drop_offs += 1
+
+            # v2 specific logic
+            if version == 'v2':
+                if n_pick_ups == 1:
+                    n_pick_ups = 0
+                    # take actions taken from spawn until pickup as feedback for ADV
+                    adv_reward = -tracker.reset_action_counter()
+                    tracker.track_adv_reward(adv_reward)
+                    adv_memory.append((adv_inputs, assignment, adv_reward))
+
+                if passenger_spawn(states[0], next_states[0]):
+                    # assign passenger randomly after new passenger is spawn
+                    adv_inputs = create_adv_inputs_single(next_states)
+                    assignment = adv_policy(adv_inputs)
+                    msgs = [0, 1] if assignment == 0 else [1, 0]
+                    next_states = add_msg_to_states(next_states, msgs)
+                else:
+                    next_states = add_old_assignment(next_states, states)
 
             if version == 'v3':
                 for reward, action in zip(rewards, actions):
@@ -147,10 +184,9 @@ def train_adv(n_episodes, version):
                 else:
                     next_states = add_old_assignment(next_states, states)
 
-            tracker.track_reward_and_action(rewards, actions, states)
 
             if episode >= cfg['adv_eps_without_training']:
-                if steps % cfg['update_freq'] == 0:
+                if steps % cfg['adv_update_freq'] == 0:
                     for adv in advs:
                         adv.replay(adv_memory, cfg['adv_replay_size'])
 
