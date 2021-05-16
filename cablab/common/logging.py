@@ -287,7 +287,11 @@ class MultiTracker:
             tracker.df.to_csv(file_name)
 
         if eval:
-            log_path = os.path.join(log_path, "eval")
+            folder_name = "eval"
+            log_path = os.path.join(log_path, folder_name)
+            while os.path.exists(log_path): 
+                folder_name += "1"
+                log_path = os.path.join(log_path, folder_name)
 
         if not os.path.exists(log_path):
             os.makedirs(log_path)

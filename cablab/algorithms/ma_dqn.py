@@ -257,8 +257,7 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
 
     # load config
     current_folder = get_last_folder("ma-dqn")
-    current_folder = '/home/niko/Info/cablab/runs/ma-dqn/4/'
-    #current_folder = "/home/niko/Info/final-runs/v3/Stage2/0"
+    current_folder = '/home/niko/Info/cablab/runs/ma-dqn/6/'
     cfg_file_path = os.path.join(current_folder, madqn_cfg_file)
     cfg = toml.load(open(cfg_file_path), _dict=dict)
     print(f'Config loaded: {cfg_file_path}')
@@ -286,7 +285,7 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
     # load model
     dqn = DQN(n_states, n_actions, cfg)
     current_model = os.path.join(current_folder, "dqn1.pth")
-    current_model = "/home/niko/Info/cablab/runs/ma-dqn/4/dqn1.pth"
+    current_model = "/home/niko/Info/cablab/runs/ma-dqn/6/dqn1.pth"
     print(current_model)
     dqn.load_model(current_model)
 
@@ -296,7 +295,7 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
         current_adv_model = os.path.join(
             current_folder, "adv1.pth"
         )
-        current_adv_model = "/home/niko/Info/cablab/runs/ma-dqn/3/adv1.pth"
+        # current_adv_model = "/home/niko/Info/cablab/runs/ma-dqn/3/adv1.pth"
         adv.load_model(current_adv_model)
 
     for episode in range(n_episodes):

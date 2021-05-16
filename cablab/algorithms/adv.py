@@ -20,7 +20,7 @@ from cablab.common.logging import *
 abs_path = Path(__file__).parent.absolute()
 madqn_cfg_file = "ma_dqn_conf.toml"
 madqn_cfg_file_path = os.path.join(abs_path, "../configs", madqn_cfg_file)
-
+madqn_cfg_file_path = "/home/niko/Info/cablab/runs/ma-dqn/3/ma_dqn_conf.toml"
 
 def train_adv(n_episodes, version):
     """
@@ -66,7 +66,8 @@ def train_adv(n_episodes, version):
 
     for episode in range(n_episodes + cfg['adv_eps_without_training']):
 
-        tracker.new_episode()
+        log_episode = episode >= cfg['adv_eps_without_training']
+        tracker.new_episode(log_episode)
         tracker.reset_waiting_time()
 
         # temp episode counter
@@ -146,15 +147,8 @@ def train_adv(n_episodes, version):
                 else:
                     next_states = add_old_assignment(next_states, states)
 
+            # v3 specific logic
             if version == 'v3':
-                for reward, action in zip(rewards, actions):
-                    if reward == 1:
-                        if action == 4:
-                            n_pick_ups += 1
-                            tracker.add_waiting_time()
-                        else:
-                            n_drop_offs += 1
-
                 if n_pick_ups == 2:
                     waiting_time = tracker.reset_waiting_time()
                     n_pick_ups = 0
@@ -185,7 +179,7 @@ def train_adv(n_episodes, version):
                     next_states = add_old_assignment(next_states, states)
 
 
-            if episode >= cfg['adv_eps_without_training']:
+            if episode >= cfg['adv_eps_without_training'] and episode < 1100:
                 if steps % cfg['adv_update_freq'] == 0:
                     for adv in advs:
                         adv.replay(adv_memory, cfg['adv_replay_size'])

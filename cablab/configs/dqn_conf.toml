@@ -23,7 +23,7 @@ assign_psng=true
 min_pick_ups=1 
 
 # Configuration needed for munchausen
-munchhausen=true 
+munchhausen=false 
 entropy_tau=0.03 
 alpha=0.9
 

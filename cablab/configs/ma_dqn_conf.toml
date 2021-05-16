@@ -40,10 +40,10 @@ info=true
 adv=false
 
 # Adv configurations
-adv_lr=0.001
+adv_lr=0.01
 adv_epsilon= 1
-adv_replay_size=10
-adv_update_freq=100
+adv_replay_size= 10
+adv_update_freq=10
 adv_epsilon_decay= 0.995
 adv_epsilon_min= 0.01
 episodes_adv= 1000
