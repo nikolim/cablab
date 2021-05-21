@@ -1,8 +1,8 @@
 title = "PPO config"
 
 # Use differnt lr for actor and critic
-lr_actor=0.00 
-lr_critic=0.0003 
+lr_actor=0.0003  
+lr_critic=0.001 
 
 # Optimizer config
 beta1=0.9 
