@@ -44,6 +44,15 @@ parser.add_argument(
     help="Run eval runs",
 )
 
+parser.add_argument(
+    "--runs",
+    type=int,
+    required=False,
+    default=1,
+    help="Select number of runs",
+)
+
+
 args = parser.parse_args()
 
 if args.algorithm in ["ppo", "dqn"]:
@@ -63,12 +72,19 @@ else:
     print(f"Please choose between: dqn, ppo, ma-dqn")
     quit()
 
-if args.algorithm == "ppo":
-    deploy_ppo(n_episodes=args.number, version=args.environment,
-               eval=args.eval, render=args.render, wait=args.wait)
-elif args.algorithm == "dqn":
-    deploy_dqn(n_episodes=args.number, version=args.environment,
-               eval=args.eval, render=args.render, wait=args.wait)
-elif args.algorithm == "ma-dqn":
-    deploy_ma_dqn(n_episodes=args.number, version=args.environment,
-                  eval=args.eval, render=args.render, wait=args.wait)
+
+for i in range(args.runs):
+
+    print('*'*50)
+    print(f'RUN{i}')
+    print('*'*50)
+
+    if args.algorithm == "ppo":
+        deploy_ppo(n_episodes=args.number, version=args.environment,
+                eval=args.eval, render=args.render, wait=args.wait)
+    elif args.algorithm == "dqn":
+        deploy_dqn(n_episodes=args.number, version=args.environment,
+                eval=args.eval, render=args.render, wait=args.wait)
+    elif args.algorithm == "ma-dqn":
+        deploy_ma_dqn(n_episodes=args.number, version=args.environment,
+                    eval=args.eval, render=args.render, wait=args.wait)

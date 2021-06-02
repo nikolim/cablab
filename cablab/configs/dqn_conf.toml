@@ -5,7 +5,7 @@ update_freq=10
 gamma=0.9 
 
 epsilon=1
-epsilon_decay=0.998
+epsilon_decay=0.9975
 epsilon_min=0.01
 
 replay_size=100 
@@ -25,7 +25,6 @@ assign_psng=false
 min_pick_ups=1 
 
 # Configuration needed for munchausen
-munchhausen=false 
+munchhausen=true 
 entropy_tau=0.03 
 alpha=0.9
-

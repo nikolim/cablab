@@ -45,8 +45,8 @@ elif args.algorithm in ["ma-dqn"]:
         print(f"{args.environment} is not a valid multi agent environment")
         print(f"Please choose between: v2 and v3")
         quit()
-elif args.algorithm == "adv":
-    train_adv(n_episodes=args.number, version=args.environment)
+elif args.algorithm in ["adv"]:
+    pass
 else:
     print(f"Error: {args.algorithm} is not a valid algorithm")
     print(f"Please choose between: dqn, ppo, ma-dqn, adv")
@@ -66,3 +66,5 @@ for i in range(args.runs):
         train_ma_dqn(
             n_episodes=args.number,
             version=args.environment)
+    elif args.algorithm == "adv":
+        train_adv(n_episodes=args.number, version=args.environment)

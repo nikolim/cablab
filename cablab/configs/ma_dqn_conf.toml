@@ -1,20 +1,21 @@
 title = "Multi-Agent DQN config"
 
-lr=0.001 
+lr=0.0005 
 update_freq=10 
 gamma=0.9 
 epsilon=1
-epsilon_decay=0.995 
+epsilon_decay=0.999
 epsilon_min=0.01
 replay_size= 100 
 target_update= 50 
+
 n_hidden= 64 
 
 # Run epsisodes without training to fill buffer
-episodes_without_training= 500 
+episodes_without_training=1000 
 
 # Replay buffer size
-replay_buffer_eps= 500
+replay_buffer_eps= 1000
 
 # Configuration needed for munchausen
 munchhausen= true 
@@ -36,18 +37,18 @@ assign_factor=2
 # Stage 3: adv=true
 assign_psng=false 
 info=false
-adv=true
+adv=false
 
 # Adv configurations
 adv_lr=0.01
 adv_epsilon= 1
 adv_replay_size= 10
+adv_update_freq=10
 adv_epsilon_decay= 0.995
 adv_epsilon_min= 0.01
-episodes_adv= 100
+episodes_adv= 1000
 adv_eps_without_training= 100
 adv_memory_size= 5000
-
 n_msg= 2 
 
 # Used to check if agents agree after training

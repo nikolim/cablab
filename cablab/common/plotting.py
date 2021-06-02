@@ -12,13 +12,6 @@ color_dict = {
     "n_passengers": "forestgreen",
     "illegal_pick_ups": "sandybrown",
     "illegal_moves": "peru",
-    "do_nothing_arr": "salmon",
-    "do_nothing_opt_arr": "orchid",
-    "do_nothing_sub_arr": "blueviolet",
-    "epsilon": "orange",
-    "useless_steps": "turquoise",
-    "wrong_psng": "red",
-    "assigned_psng": "green",
     "avg_waiting_time": "darkorchid",
     "mean_actions_per_pick_up": "turquoise"
 }
@@ -27,10 +20,13 @@ color_dict = {
 sns.set()
 plt.figure(dpi=1200)
 
-smoothing_factor = 50
+smoothing_factor = 100
 
 
 def adjust_lightness(color, amount=0.5):
+    """
+    Make color darker or ligther
+    """
     try:
         c = mc.cnames[color]
     except:
@@ -40,7 +36,9 @@ def adjust_lightness(color, amount=0.5):
 
 
 def smoothing_mean_std(arr, step_size):
-
+    """
+    Smoothing over array and calculate standard deviation
+    """
     arr = np.array(arr)
     mean_arr = np.array([])
     std_arr = np.array([])
@@ -56,7 +54,9 @@ def smoothing_mean_std(arr, step_size):
     return mean_arr, std_arr, x_values
 
 def smoothing(arr, step_size):
-
+    """
+    Smoothing over array
+    """
     arr = np.array(arr)
 
     for i in range(0, len(arr), step_size):
@@ -70,6 +70,9 @@ def smoothing(arr, step_size):
 
 
 def plot_losses(arr):
+    """
+    Plot training losses 
+    """
     fig, ax1 = plt.subplots()
     mean_rewards, std_rewards, x = smoothing_mean_std(
         arr, step_size=smoothing_factor)
@@ -78,7 +81,9 @@ def plot_losses(arr):
 
 
 def plot_values(df, ids, path):
-
+    """
+    Plot values of pandas datagrame for single agent
+    """
     fig, ax1 = plt.subplots()
     ax1.set_xlabel("Episodes")
 
@@ -100,7 +105,6 @@ def plot_values(df, ids, path):
             alpha=0.2,
             color=color,
         )
-
     if len(ids) == 1:
         ax1.set_ylabel(ids[0])
     else:
@@ -112,7 +116,9 @@ def plot_values(df, ids, path):
 
 
 def plot_mult_agent(dfs, ids, path, labels=None, colors=None):
-
+    """
+    Plot values of pandas dataframe for mulit agent
+    """
     fig, ax1 = plt.subplots()
     ax1.set_xlabel("Episodes")
 
@@ -154,7 +160,9 @@ def plot_mult_agent(dfs, ids, path, labels=None, colors=None):
 
 
 def plot_mult_runs(dfs, ids, path, labels=None, double_scale=False):
-
+    """
+    Plot values of multiple runs
+    """
     fig, ax1 = plt.subplots()
     ax1.set_xlabel("Episodes")
 
@@ -165,7 +173,10 @@ def plot_mult_runs(dfs, ids, path, labels=None, double_scale=False):
     mindf = DF.min()
     
     for i, id in enumerate(ids):
-        color = color_dict[id]
+        try:
+            color = color_dict[id]
+        except KeyError: 
+            color = 'black'
         ax1.set_ylabel(id)
 
         mean_data, x = smoothing(meandf[id], step_size=smoothing_factor)

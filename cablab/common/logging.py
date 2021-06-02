@@ -129,11 +129,9 @@ class Tracker:
     
     def append_action_counter(self): 
         self.action_counter_arr.append(self.action_counter)
-        self.action_counter = 0
+        #self.action_counter = 0
 
-    def track_reward_and_action(self, reward, action, state, multi_agent=False):
-        
-        pick_up = False
+    def track_reward_and_action(self, reward, action, state):
         if action != 6:
             self.action_counter += 1
 
@@ -147,7 +145,6 @@ class Tracker:
             if not self.passenger:
                 # reset action counter after pick-up
                 self.append_action_counter()
-                pick_up = True
 
             self.passenger = not self.passenger
             self.pick_ups += 1
@@ -155,8 +152,6 @@ class Tracker:
         self.waiting_time += 1
         self.episode_reward += reward
     
-        return pick_up
-
     def get_pick_ups(self):
         return round(self.pick_ups / 2, 3)
 
@@ -257,14 +252,15 @@ class MultiTracker:
         self.adv_reward_counter = 0
 
     def track_reward_and_action(self, rewards, actions, states):
-        pick_ups =[]
         for i, tracker in enumerate(self.trackers):
-            pick_ups.append(tracker.track_reward_and_action(
-                rewards[i], actions[i], states[i], multi_agent=True))
+            tracker.track_reward_and_action(
+                rewards[i], actions[i], states[i])
 
-        if True in pick_ups: 
-            for tracker in self.trackers: 
-                tracker.append_action_counter()
+        # append action counter for other agent 
+        if rewards[0] == pick_up_reward and actions[0] == 4: 
+            self.trackers[1].append_action_counter()
+        if rewards[1] == pick_up_reward and actions[1] == 4: 
+            self.trackers[0].append_action_counter()
 
         # increase waiting time in every timestep
         self.waiting_time += 1
@@ -291,15 +287,14 @@ class MultiTracker:
             tracker.df.to_csv(file_name)
 
         if eval:
-            log_path = os.path.join(log_path, "eval")
+            folder_name = "eval"
+            log_path = os.path.join(log_path, folder_name)
+            while os.path.exists(log_path): 
+                folder_name += "1"
+                log_path = os.path.join(log_path, folder_name)
 
         if not os.path.exists(log_path):
             os.makedirs(log_path)
-
-        # cut-off episodes without training for dqn
-        if pre:
-            for i in range(len(dfs)):
-                dfs[i] = dfs[i][pre:]
 
         # Base Metric
         plot_mult_agent(dfs, ["rewards"], log_path)
@@ -318,6 +313,12 @@ class MultiTracker:
             summed_df += dfs[i]
         file_name = os.path.join(log_path, "logs_summed.csv")
         summed_df.to_csv(file_name)
+
+        # save adv rewards into DF
+        adv_df = pd.DataFrame()
+        adv_df['adv_rewards'] = self.adv_episode_reward_arr
+        file_name = os.path.join(log_path, "adv_logs.csv")
+        adv_df.to_csv(file_name)
 
     def plot_adv_rewards(self, log_path):
         plot_arr(self.adv_episode_reward_arr, log_path, "adv_rewards.png")

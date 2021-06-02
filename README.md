@@ -69,7 +69,7 @@ Uses the most recent model. Models can only be deployed in environments they wer
 python3 deploy.py -a ppo -n 10 -env v0 -r True
 ```
 ```
-usage: python3 deploy.py -a ALGORITHM -n NUMBER -env ENVIRONEMTN [-w WAIT] [-r RENDER] [-e RENDER]
+usage: python3 deploy.py -a ALGORITHM -n NUMBER -env ENVIRONEMTN [-w WAIT] [-r RENDER] [-e EVAL]
 error: the following arguments are required: -a/--algorithm, -n/--number, -env/--environment
 ```
 

@@ -119,6 +119,7 @@ def train_ma_dqn(n_episodes, version):
                 actions.append(policy(states[i]))
 
             next_states, rewards, is_done, _ = env.step(actions)
+            tracker.track_reward_and_action(rewards, actions, states)
 
             if cfg['info']:
                 next_states = append_other_agents_pos(next_states)
@@ -141,7 +142,7 @@ def train_ma_dqn(n_episodes, version):
                     n_pick_ups = 0
                     if cfg['adv']:
                         # take actions taken from spawn until pickup as feedback for ADV
-                        adv_reward = - tracker.reset_action_counter()
+                        adv_reward = -tracker.reset_action_counter()
                         adv_memory.append((adv_inputs, assignment, adv_reward))
                         if episode >= (cfg['episodes_without_training'] + n_episodes - cfg['episodes_adv']):
                             tracker.track_adv_reward(adv_reward)
@@ -189,8 +190,6 @@ def train_ma_dqn(n_episodes, version):
                 else:
                     if cfg['adv'] or cfg['assign_psng']:
                         next_states = add_old_assignment(next_states, states)
-
-            tracker.track_reward_and_action(rewards, actions, states)
 
             # Scale rewards to motivate cabs to follow assignment strategy
             if cfg['adv'] or cfg['assign_psng']:
@@ -258,17 +257,17 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
 
     # load config
     current_folder = get_last_folder("ma-dqn")
-    # current_folder = '/home/niko/Info/cablab/runs/ma-dqn/56/'
+    current_folder = "/home/niko/Info/final-runs/v3/Stage2/1/"
     cfg_file_path = os.path.join(current_folder, madqn_cfg_file)
     cfg = toml.load(open(cfg_file_path), _dict=dict)
     print(f'Config loaded: {cfg_file_path}')
 
-    env_name = "Cabworld-" + version
-    env = gym.make(env_name)
-
     if not render:
         disp = Display()
         disp.start()
+
+    env_name = "Cabworld-" + version
+    env = gym.make(env_name)
 
     if cfg['adv'] or cfg['assign_psng']:
         extended_state = 1
@@ -295,6 +294,7 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
         current_adv_model = os.path.join(
             current_folder, "adv1.pth"
         )
+        # current_adv_model = "/home/niko/Info/cablab/runs/ma-dqn/3/adv1.pth"
         adv.load_model(current_adv_model)
 
     for episode in range(n_episodes):
@@ -351,17 +351,17 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
             if version == 'v2' and (cfg['assign_psng'] or cfg['adv']):
                 if n_pick_ups == 1:
                     n_pick_ups = 0
-                if passenger_spawn(states[0], next_states[0]):
+                if passenger_spawn(old_states[0], states[0]):
                     # assign passenger randomly after spawn
                     if cfg['assign_psng']:
                         msgs = random.sample([[0, 1], [1, 0]], 1)[0]
-                        next_states = add_msg_to_states(next_states, msgs)
+                        states = add_msg_to_states(states, msgs)
                     if cfg['adv']:
-                        adv_inputs = create_adv_inputs_single(next_states)
+                        adv_inputs = create_adv_inputs_single(states)
                         assignment = adv.deploy(adv_inputs)
                         msgs = [0, 1] if assignment == 0 else [1, 0]
-                        next_states = add_msg_to_states(
-                            next_states, msgs)
+                        states = add_msg_to_states(
+                            states, msgs)
                 else:
                     states = add_old_assignment(states, old_states)
 
