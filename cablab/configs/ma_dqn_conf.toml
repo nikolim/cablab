@@ -12,7 +12,7 @@ target_update= 50
 n_hidden= 64 
 
 # Run epsisodes without training to fill buffer
-episodes_without_training= 1000 
+episodes_without_training=1000 
 
 # Replay buffer size
 replay_buffer_eps= 1000

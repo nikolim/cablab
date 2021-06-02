@@ -20,7 +20,7 @@ from cablab.common.logging import *
 abs_path = Path(__file__).parent.absolute()
 madqn_cfg_file = "ma_dqn_conf.toml"
 madqn_cfg_file_path = os.path.join(abs_path, "../configs", madqn_cfg_file)
-madqn_cfg_file_path = "/home/niko/Info/cablab/runs/ma-dqn/11/ma_dqn_conf.toml"
+madqn_cfg_file_path = "/home/niko/Info/cablab/runs/ma-dqn/6/ma_dqn_conf.toml"
 
 def train_adv(n_episodes, version):
     """
@@ -53,7 +53,7 @@ def train_adv(n_episodes, version):
 
     dqn = DQN(n_states, n_actions, cfg)
     # Select model trained on assigned passengers (single or multi-agent)
-    current_model = "/home/niko/Info/cablab/runs/ma-dqn/11/dqn1.pth"
+    current_model = "/home/niko/Info/cablab/runs/ma-dqn/6/dqn1.pth"
     dqn.load_model(current_model)
 
     advs = []
@@ -179,7 +179,7 @@ def train_adv(n_episodes, version):
                     next_states = add_old_assignment(next_states, states)
 
 
-            if episode >= cfg['adv_eps_without_training'] and episode < 1100:
+            if episode >= cfg['adv_eps_without_training']:
                 if steps % cfg['adv_update_freq'] == 0:
                     for adv in advs:
                         adv.replay(adv_memory, cfg['adv_replay_size'])

@@ -257,7 +257,7 @@ def deploy_ma_dqn(n_episodes, version, eval=False, render=False, wait=0.05):
 
     # load config
     current_folder = get_last_folder("ma-dqn")
-    current_folder = "/home/niko/Info/cablab/runs/ma-dqn/10"
+    current_folder = "/home/niko/Info/final-runs/v3/Stage2/1/"
     cfg_file_path = os.path.join(current_folder, madqn_cfg_file)
     cfg = toml.load(open(cfg_file_path), _dict=dict)
     print(f'Config loaded: {cfg_file_path}')
